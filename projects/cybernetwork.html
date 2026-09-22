@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CyberNetwork Endpoint Protection | Prince Ugochukwu</title>
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+
+<header class="site">
+  <div class="wrap">
+    <nav>
+      <a class="name" href="../index.html">Prince Ugochukwu</a>
+      <div class="links">
+        <a href="../index.html">Home</a>
+        <a href="../about.html">About</a>
+        <a href="../certifications.html">Certifications</a>
+        <a href="../tools.html">Tools</a>
+        <a class="current" href="../projects.html">Projects</a>
+      </div>
+    </nav>
+  </div>
+</header>
+
+<div class="wrap-wide">
+  <p class="breadcrumb"><a href="../projects.html">&larr; Back to Projects</a></p>
+
+  <section class="case-header">
+    <h1>Enterprise Endpoint Protection &amp; Vulnerability Management</h1>
+    <p class="case-org">CyberNetwork Healthcare Logistics &middot; Expadox Limited internship, cohort 3</p>
+    <p class="case-meta">Team project &middot; 14-day sprint &middot; 4 monitored endpoints, 3 office locations</p>
+  </section>
+
+  <section class="case-section">
+    <h2>The problem</h2>
+    <p>
+      CyberNetwork is a healthcare logistics company running Windows workstations, Linux servers,
+      and a small number of macOS laptops across three offices. Going in, there was no trusted
+      asset inventory, no vulnerability baseline, patches applied manually and inconsistently, and
+      no endpoint detection in place. A competitor in the same sector had just been hit with
+      ransomware through an unpatched machine with an exposed RDP port. The team had 14 days to
+      build a full endpoint protection and vulnerability management program before a board
+      meeting, with evidence at every stage rather than assurances.
+    </p>
+    <figure class="case-figure">
+      <img src="../assets/img/cybernetwork/01-business-case.jpg" alt="Business case slide: the challenge and strategic objective for the CyberNetwork endpoint protection program">
+      <figcaption>The business case presented to the board: the gaps going in, and the objective for the 14-day sprint.</figcaption>
+    </figure>
+  </section>
+
+  <section class="case-section">
+    <h2>My role</h2>
+    <p>This was a team build. My specific contributions:</p>
+    <ul class="role-list">
+      <li>Designed and built the asset inventory, including the asset tagging convention used across the environment (CYB-PC-W00x for Windows workstations, CYB-SVR/PC-L00x for Linux systems)</li>
+      <li>Built the endpoint security architecture connecting every asset, Wazuh, and Action1 into one control plane</li>
+      <li>Introduced Tailscale to bridge endpoints across the three office locations, including machines managed by other team members</li>
+      <li>Created and hosted two of the environment's Linux VMs: CYB-SVR-L001, which runs the Wazuh manager and server, and CYB-PC-L005, a Wazuh agent endpoint. Both also run Action1 and Tailscale agents</li>
+    </ul>
+    <figure class="case-figure">
+      <img src="../assets/img/cybernetwork/07-security-architecture-diagram.png" alt="Endpoint security architecture diagram showing Wazuh, Action1, and Tailscale connecting CYB-SVR-L001, CYB-PC-L005, and the Windows workstations">
+      <figcaption>The security architecture, showing the Tailscale mesh tying together endpoints across office locations, with CYB-SVR-L001 hosting the Wazuh manager.</figcaption>
+    </figure>
+  </section>
+
+  <section class="case-section">
+    <h2>Solution architecture</h2>
+    <p>
+      Five capabilities running on one integrated control plane, with clear tool ownership at each
+      stage: discover, assess, detect, remediate, verify.
+    </p>
+    <figure class="case-figure">
+      <img src="../assets/img/cybernetwork/02-solution-architecture.jpg" alt="Solution architecture slide showing five capabilities: asset visibility, vulnerability, detection and response, patch management, and remediation tracking">
+      <figcaption>Asset visibility (Wazuh + Action1 + manual validation), vulnerability scanning and patch management (Action1), detection and response (Wazuh), and remediation tracking (Python + spreadsheet).</figcaption>
+    </figure>
+  </section>
+
+  <section class="case-section">
+    <h2>Governance and remediation workflow</h2>
+    <p>
+      Every finding moves through the same six-step loop: discover, prioritise, assign, remediate,
+      re-scan, close. Priority is set by CVSS severity, EPSS exploit likelihood, and business
+      impact together, not severity alone, and each severity tier carries its own response SLA.
+    </p>
+    <figure class="case-figure">
+      <img src="../assets/img/cybernetwork/03-governance-remediation-loop.jpg" alt="Governance slide showing the six-step verified remediation loop and SLA targets by severity">
+      <figcaption>The verified remediation loop and board-level SLA targets by severity.</figcaption>
+    </figure>
+    <table class="sla-table">
+      <tr><th>Severity</th><th>Target</th><th>Action</th></tr>
+      <tr><td>Critical</td><td>24 hours</td><td>Isolate and notify CISO</td></tr>
+      <tr><td>High</td><td>7 days</td><td>Daily status</td></tr>
+      <tr><td>Medium</td><td>30 days</td><td>Weekly review</td></tr>
+      <tr><td>Low</td><td>90 days</td><td>Monthly review</td></tr>
+    </table>
+  </section>
+
+  <section class="case-section">
+    <h2>Asset inventory</h2>
+    <p>
+      The monitored environment covers four endpoints across three offices: three Windows
+      workstations and one Linux server hosting the Wazuh manager, indexer, and dashboard, all at
+      100% agent coverage across Wazuh and Action1.
+    </p>
+    <figure class="case-figure">
+      <img src="../assets/img/cybernetwork/06-asset-inventory.jpg" alt="Asset inventory table listing four managed endpoints with OS, hardware specs, and agent deployment status">
+      <figcaption>Full asset inventory, hardware specs, and agent deployment status.</figcaption>
+    </figure>
+  </section>
+
+  <section class="case-section">
+    <h2>Outcomes</h2>
+    <p>
+      By day 14, risk exposure and mean time to respond had both moved down, while patch
+      compliance and CIS security configuration score both moved up, tracked through a
+      before/after scorecard rather than asserted. The board pack delivered alongside the program:
+    </p>
+    <figure class="case-figure">
+      <img src="../assets/img/cybernetwork/04-executive-outcomes.jpg" alt="Executive outcomes slide showing risk exposure down, response speed down, patch compliance up, and control strength up, plus the board pack contents">
+      <figcaption>Executive outcomes and the five-part board pack: scorecard, Wazuh dashboard, Action1 compliance view, executive risk report, and Notion evidence library.</figcaption>
+    </figure>
+  </section>
+
+  <section class="case-section">
+    <h2>Delivery assurance</h2>
+    <p>
+      Success was defined against three criteria the program had to satisfy by day 14: full
+      coverage of known endpoints, verified controls in place, and retained evidence at every
+      stage rather than a one-time claim.
+    </p>
+    <figure class="case-figure">
+      <img src="../assets/img/cybernetwork/05-delivery-assurance.jpg" alt="Delivery assurance slide showing coverage, control, and evidence criteria that had to be true by day 14">
+      <figcaption>The coverage, control, and evidence checklist the program was measured against.</figcaption>
+    </figure>
+    <div class="scope-note">
+      One requirement didn't make it into the final delivery: a fully automated Python script to
+      drive the remediation loop end to end. Given the 14-day window, remediation tracking ran
+      through the Python and spreadsheet workflow manually rather than as a scheduled automation.
+      Building that automation layer is the clear next iteration on this program.
+    </div>
+  </section>
+
+  <section class="case-section" style="border-bottom:none;">
+    <h2>Full documentation</h2>
+    <p>
+      The complete project report, including architecture notes, process detail, and additional
+      screenshots from every team member, is documented on Notion.
+    </p>
+    <p>
+      <a href="https://app.notion.com/p/Expadox-Lab-1-CyberNetwork-3b1d58e72db88049b1acd04579c0cbc7#3c7d58e72db8806bb949d7bc14e7c722" target="_blank" rel="noopener">View full report on Notion &rarr;</a>
+    </p>
+  </section>
+
+</div>
+
+<footer class="site">
+  <div class="wrap">
+    Built and maintained by Prince Ugochukwu.
+  </div>
+</footer>
+
+</body>
+</html>
