@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MedCore Security Monitoring | Prince Ugochukwu</title>
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+
+<header class="site">
+  <div class="wrap">
+    <nav>
+      <a class="name" href="../index.html">Prince Ugochukwu</a>
+      <div class="links">
+        <a href="../index.html">Home</a>
+        <a href="../about.html">About</a>
+        <a href="../certifications.html">Certifications</a>
+        <a href="../tools.html">Tools</a>
+        <a class="current" href="../projects.html">Projects</a>
+      </div>
+    </nav>
+  </div>
+</header>
+
+<div class="wrap-wide">
+  <p class="breadcrumb"><a href="../projects.html">&larr; Back to Projects</a></p>
+
+  <section class="case-header">
+    <h1>Security Monitoring Environment</h1>
+    <p class="case-org">MedCore Logistics &middot; Expadox Limited internship, cohort 3</p>
+    <p class="case-meta">Team project &middot; 14-day sprint &middot; 4 endpoints across hybrid on-premise + AWS/Azure infrastructure</p>
+  </section>
+
+  <section class="case-section">
+    <h2>The problem</h2>
+    <p>
+      MedCore Logistics is a fintech startup providing online payment processing and wallet
+      services across multiple African countries. Its infrastructure spans on-premise systems
+      and AWS and Azure cloud workloads, but there was no centralized logging, no visibility into
+      failed logins or network anomalies, and no structured detection or escalation process.
+      Payment APIs and user data were a direct target for credential stuffing and data
+      exfiltration, with detection delay as the single biggest driver of breach cost. The team had
+      14 days to design and stand up a centralized security monitoring environment delivering
+      real-time detection, automated alerting, and evidence-based reporting across endpoints,
+      network, and cloud.
+    </p>
+    <figure class="case-figure">
+      <img src="../assets/img/medcore/01-the-challenge.jpg" alt="Slide showing MedCore's visibility gap: current state and why it matters">
+      <figcaption>The visibility gap going in: no centralized logging, unnoticed anomalies, and growing exposure on payment APIs.</figcaption>
+    </figure>
+  </section>
+
+  <section class="case-section">
+    <h2>My role</h2>
+    <p>This was a team build, split across analyst, engineer, and responder responsibilities. My specific contributions:</p>
+    <ul class="role-list">
+      <li>Deployed and configured Suricata network intrusion detection across all four endpoints</li>
+      <li>Created and hosted MED-SVR-L001, the Linux VM running the Wazuh manager, indexer, and dashboard, alongside Suricata, Action1, and Tailscale agents</li>
+      <li>Created and hosted MED-PC-L002, the Linux VM used to run Atomic Red Team, from which all three attack simulations were executed, also running a Wazuh agent, Suricata, Action1, and Tailscale</li>
+      <li>Helped a colleague configure Suricata on the two Windows VMs they hosted, which also ran Tailscale and Action1</li>
+      <li>Created and configured the AWS and Azure accounts, feeding CloudTrail and Activity Log events into the Wazuh dashboard</li>
+      <li>Simulated all three attack scenarios from MED-PC-L002 and confirmed detection on the Wazuh dashboard hosted on MED-SVR-L001</li>
+      <li>Configured Wazuh's severity-based email alerting</li>
+      <li>Wrote the incident response playbooks and remediation steps for all three threat scenarios</li>
+    </ul>
+  </section>
+
+  <section class="case-section">
+    <h2>Solution architecture</h2>
+    <p>
+      Log sources from on-premise servers, Windows and Linux endpoints, AWS CloudTrail, Azure
+      Activity Log, and Suricata network sensors are tied together through an encrypted Tailscale
+      mesh, removing the need for open inbound firewall ports. Wazuh sits at the core for
+      ingestion, correlation, and detection mapped to MITRE ATT&amp;CK, with Action1 covering
+      endpoint patch and vulnerability visibility and Suricata covering network-based detection.
+    </p>
+    <figure class="case-figure">
+      <img src="../assets/img/medcore/02-proposed-architecture.jpg" alt="Proposed architecture diagram showing log sources flowing through Tailscale into the Wazuh, Action1, and Suricata core platform">
+      <figcaption>The proposed architecture: log sources, secure transport, core platform, and detection output.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/medcore/05-enterprise-architecture.jpg" alt="Detailed enterprise technology architecture diagram for the MedCore monitoring environment">
+      <figcaption>The as-built enterprise architecture connecting on-premise, endpoint, and cloud log sources into a single detection platform.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/medcore/06-tailscale-endpoints.jpg" alt="Tailscale admin console showing all four MedCore endpoints connected to the mesh network">
+      <figcaption>All four endpoints connected and visible on the Tailscale mesh, tying the distributed locations together.</figcaption>
+    </figure>
+  </section>
+
+  <section class="case-section">
+    <h2>Deployment</h2>
+    <p>
+      The Wazuh manager, indexer, and dashboard were deployed on MED-SVR-L001, with agents
+      rolled out across the Windows and Linux endpoints. Suricata was installed and configured on
+      every endpoint, generating structured EVE JSON logs and feeding alerts back into the Wazuh
+      dashboard for correlation.
+    </p>
+    <figure class="case-figure">
+      <img src="../assets/img/medcore/08-suricata-linux-install.jpg" alt="Terminal output showing Suricata installation and rules database setup on a Linux endpoint">
+      <figcaption>Suricata installation and rules database setup on MED-SVR-L001.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/medcore/07-wazuh-dashboard.jpg" alt="Wazuh dashboard overview showing alert counts and MITRE ATT&CK breakdown for the newly onboarded endpoints">
+      <figcaption>Wazuh dashboard overview after onboarding, showing alert volume and top MITRE ATT&amp;CK techniques observed.</figcaption>
+    </figure>
+  </section>
+
+  <section class="case-section">
+    <h2>Attack simulation and detection validation</h2>
+    <p>
+      Atomic Red Team was used to safely reproduce three real-world attack patterns from
+      MED-PC-L002 and confirm the monitoring stack actually detects them, not just logs activity.
+    </p>
+    <table class="sla-table">
+      <tr><th>Scenario</th><th>MITRE ATT&amp;CK ID</th><th>Status</th></tr>
+      <tr><td>Brute force (SSH credential stuffing)</td><td>T1110.004</td><td>Confirmed on Wazuh dashboard + email</td></tr>
+      <tr><td>Privilege escalation (sudo to root)</td><td>T1548.003</td><td>Confirmed on Wazuh dashboard</td></tr>
+      <tr><td>Data exfiltration (HTTP over non-standard port)</td><td>T1048.003</td><td>Executed live; custom Suricata rule authored, detection tuning in progress</td></tr>
+    </table>
+    <figure class="case-figure">
+      <img src="../assets/img/medcore/09-bruteforce-detection.jpg" alt="Terminal showing the brute force simulation conclusion and the resulting Wazuh email alert notification">
+      <figcaption>Brute force simulation on MED-PC-L002, and the resulting Wazuh alert email received within minutes.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/medcore/10-privilege-escalation-detection.jpg" alt="Wazuh dashboard showing privilege escalation alerts mapped to MITRE ATT&CK technique T1548.003">
+      <figcaption>Wazuh dashboard correlating repeated sudo-to-root events to MITRE ATT&amp;CK T1548.003.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/medcore/11-data-exfiltration-test.jpg" alt="Terminal output showing the data exfiltration test executed against MED-PC-L002">
+      <figcaption>Data exfiltration test executed against MED-PC-L002 to validate the custom detection rule.</figcaption>
+    </figure>
+  </section>
+
+  <section class="case-section">
+    <h2>Vulnerability visibility</h2>
+    <p>
+      Action1 ran an initial vulnerability assessment across all four enrolled endpoints,
+      surfacing 426 critical, 2,425 high, 2,473 medium, and 27 low severity findings to establish
+      a baseline for remediation.
+    </p>
+    <figure class="case-figure">
+      <img src="../assets/img/medcore/12-vulnerability-detection.jpg" alt="Wazuh vulnerability detection dashboard showing findings by severity across MedCore endpoints">
+      <figcaption>Vulnerability findings by severity, top affected OS, and top vulnerable packages across the enrolled endpoints.</figcaption>
+    </figure>
+  </section>
+
+  <section class="case-section" style="border-bottom:none;">
+    <h2>Outcome</h2>
+    <p>
+      By the end of the sprint, all four endpoints were connected through the Tailscale mesh with
+      Wazuh operational as the central correlation platform and Suricata active across every
+      endpoint. Two of the three required attack simulations, brute force and privilege
+      escalation, were fully confirmed end to end with dashboard and email evidence. The third,
+      data exfiltration, was executed as a live test with a custom Suricata rule authored for it;
+      detection tuning was still in progress at the time of reporting rather than treated as
+      silently complete. The environment reliably detects and alerts on unauthorized access and
+      privilege escalation attempts today, with the remaining work scoped to narrowing one
+      specific detection gap rather than any further deployment.
+    </p>
+    <p>
+      The full project report, including the detailed 14-day roadmap, architecture notes, every
+      deployment screenshot, and the incident response runbooks for all three scenarios, is
+      documented on Notion.
+    </p>
+    <p>
+      <a href="https://app.notion.com/p/Project-2-Expadox-3ca9567e4514807081bee6d9f2e480e9" target="_blank" rel="noopener">View full report on Notion &rarr;</a>
+    </p>
+  </section>
+
+</div>
+
+<footer class="site">
+  <div class="wrap">
+    Built and maintained by Prince Ugochukwu.
+  </div>
+</footer>
+
+</body>
+</html>
