@@ -148,6 +148,15 @@
 
   <section class="case-section" style="border-bottom:none;">
     <h2>Outcome</h2>
+    <h3 style="font-size:17px; font-weight:600; margin:0 0 12px;">Final Network Architecture / Security Posture After Security Solutions Were Deployed</h3>
+    <p>
+      Before this build, MedCore had no centralized logging, no vulnerability baseline, and no
+      visibility into failed logins or network anomalies across its on-premise and cloud
+      infrastructure. After deployment, every endpoint reports into a central Wazuh platform
+      correlated against AWS CloudTrail and Azure Activity Log, vulnerabilities are tracked
+      through Action1, and confirmed threats trigger both a dashboard alert and a severity-based
+      email notification to the SOC analyst.
+    </p>
     <figure class="case-figure">
       <img src="../assets/img/medcore/13-final-architecture.png" alt="Final MedCore security monitoring architecture showing exact endpoint specs, AWS and Azure log sources, and email alerting">
       <figcaption>The as-delivered architecture with actual endpoint specs, cloud log sources, and the email alerting path.</figcaption>
