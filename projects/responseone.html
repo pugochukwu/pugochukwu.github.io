@@ -85,7 +85,7 @@
       would have caused cross-triggering. It was found during testing and corrected.
     </p>
     <figure class="case-figure">
-      <img src="../assets/img/responseone/03-branch-wiring-fix.jpg" alt="Shuffle canvas showing the branch connection corrected between conditional paths">
+      <img src="../assets/img/responseone/03-branch-wiring-fix.png" alt="Shuffle canvas showing the branch connection corrected between conditional paths">
       <figcaption>Correcting an unintended branch connection in the Shuffle canvas before it could misroute a finding.</figcaption>
     </figure>
     <p>
@@ -99,7 +99,7 @@
       assigned the Router as the startnode, resolving routing for all three branches.
     </p>
     <figure class="case-figure">
-      <img src="../assets/img/responseone/13-router-node-fix.jpg" alt="Shuffle canvas showing the Router pass-through node fixing the startnode bug that was skipping two of three branches">
+      <img src="../assets/img/responseone/13-router-node-fix.png" alt="Shuffle canvas showing the Router pass-through node fixing the startnode bug that was skipping two of three branches">
       <figcaption>The Router fix: all three branches now sit under a shared pass-through node, resolving the startnode bug.</figcaption>
     </figure>
     <p>
@@ -108,7 +108,7 @@
       real context rather than raw JSON.
     </p>
     <figure class="case-figure">
-      <img src="../assets/img/responseone/04-cve-enrichment-slack-alert.jpg" alt="Slack alert showing full NVD-enriched CVE detail for CVE-2021-44228">
+      <img src="../assets/img/responseone/04-cve-enrichment-slack-alert.png" alt="Slack alert showing full NVD-enriched CVE detail for CVE-2021-44228">
       <figcaption>NVD-enriched CVE alert delivered to Slack with full CVSS and description detail.</figcaption>
     </figure>
   </section>
@@ -121,11 +121,11 @@
       finding.
     </p>
     <figure class="case-figure">
-      <img src="../assets/img/responseone/05-security-scanners-workflow.jpg" alt="GitHub Actions security-scanners.yml workflow defining the four scanner jobs">
+      <img src="../assets/img/responseone/05-security-scanners-workflow.png" alt="GitHub Actions security-scanners.yml workflow defining the four scanner jobs">
       <figcaption>The security-scanners.yml workflow defining all four scanner jobs.</figcaption>
     </figure>
     <figure class="case-figure">
-      <img src="../assets/img/responseone/06-all-scanners-passing.jpg" alt="GitHub Actions run showing all four scanner jobs completing successfully">
+      <img src="../assets/img/responseone/06-all-scanners-passing.png" alt="GitHub Actions run showing all four scanner jobs completing successfully">
       <figcaption>All four scanner jobs completing end to end, confirming the pipeline is operational.</figcaption>
     </figure>
     <figure class="case-figure">
@@ -167,11 +167,11 @@
       received a real-time alert with accurate repo, file, and line data.
     </p>
     <figure class="case-figure">
-      <img src="../assets/img/responseone/10-secrets-test-file-planted.jpg" alt="Creating and committing a test file containing a synthetic AWS access key to trigger the secrets scan">
+      <img src="../assets/img/responseone/10-secrets-test-file-planted.png" alt="Creating and committing a test file containing a synthetic AWS access key to trigger the secrets scan">
       <figcaption>Planting a synthetic AWS key to trigger the secrets scan, avoiding AWS's own allowlisted documentation placeholder.</figcaption>
     </figure>
     <figure class="case-figure">
-      <img src="../assets/img/responseone/22-secrets-scan-completed.jpg" alt="Gitleaks secrets scan completing and the severity gate blocking the build on the detected secret">
+      <img src="../assets/img/responseone/22-secrets-scan-completed.png" alt="Gitleaks secrets scan completing and the severity gate blocking the build on the detected secret">
       <figcaption>Gitleaks detecting the planted secret and the severity gate blocking the build.</figcaption>
     </figure>
     <figure class="case-figure">
@@ -186,7 +186,7 @@
       job, and the alert reached Shuffle with the exact rule and file that triggered it.
     </p>
     <figure class="case-figure">
-      <img src="../assets/img/responseone/12-sast-test-file-planted.jpg" alt="Creating the SAST Semgrep test file with a planted SQL injection pattern">
+      <img src="../assets/img/responseone/12-sast-test-file-planted.png" alt="Creating the SAST Semgrep test file with a planted SQL injection pattern">
       <figcaption>Planting a known SQL injection pattern to give Semgrep a genuine error-level finding to catch.</figcaption>
     </figure>
     <figure class="case-figure">
@@ -194,7 +194,7 @@
       <figcaption>Shuffle execution detail confirming the exact rule (sqlalchemy-execute-raw-query) and file that triggered the alert.</figcaption>
     </figure>
     <figure class="case-figure">
-      <img src="../assets/img/responseone/21-sast-slack-evidence.jpg" alt="Slack alert confirming the SAST finding with rule and file detail">
+      <img src="../assets/img/responseone/21-sast-slack-evidence.png" alt="Slack alert confirming the SAST finding with rule and file detail">
       <figcaption>Slack alert confirming the SAST finding, matching the rule and file Shuffle received.</figcaption>
     </figure>
 
@@ -205,7 +205,7 @@
       pollution CVE, was planted to give Trivy a real dependency to flag.
     </p>
     <figure class="case-figure">
-      <img src="../assets/img/responseone/15-sca-vulnerable-dependency-planted.jpg" alt="Planting the outdated lodash 4.17.4 dependency in package.json to trigger the SCA scan">
+      <img src="../assets/img/responseone/15-sca-vulnerable-dependency-planted.png" alt="Planting the outdated lodash 4.17.4 dependency in package.json to trigger the SCA scan">
       <figcaption>Planting a known-vulnerable lodash version, confirmed by npm's own audit output before Trivy ever ran.</figcaption>
     </figure>
     <figure class="case-figure">
@@ -225,7 +225,7 @@
       High-severity findings: SQL Injection and Source Code Disclosure via File Inclusion.
     </p>
     <figure class="case-figure">
-      <img src="../assets/img/responseone/17-dast-full-scan-switch.jpg" alt="Switching the ZAP scan step from action-baseline to action-full-scan on the GitHub Codespace terminal">
+      <img src="../assets/img/responseone/17-dast-full-scan-switch.png" alt="Switching the ZAP scan step from action-baseline to action-full-scan on the GitHub Codespace terminal">
       <figcaption>Switching to an active ZAP full scan after the passive baseline scan returned no genuine High-risk finding.</figcaption>
     </figure>
     <figure class="case-figure">
@@ -233,15 +233,15 @@
       <figcaption>The full ZAP scan completing, both High-severity findings caught, and the gate blocking the build.</figcaption>
     </figure>
     <figure class="case-figure">
-      <img src="../assets/img/responseone/24-dast-slack-evidence.jpg" alt="Slack alert confirming the DAST findings with risk and confidence detail">
+      <img src="../assets/img/responseone/24-dast-slack-evidence.png" alt="Slack alert confirming the DAST findings with risk and confidence detail">
       <figcaption>Slack alert confirming the DAST findings, correctly isolated to genuine High-risk entries after the riskdesc fix.</figcaption>
     </figure>
     <figure class="case-figure">
-      <img src="../assets/img/responseone/25-dast-shuffle-evidence.jpg" alt="Shuffle execution details showing the DAST finding routed and enriched correctly">
+      <img src="../assets/img/responseone/25-dast-shuffle-evidence.png" alt="Shuffle execution details showing the DAST finding routed and enriched correctly">
       <figcaption>Shuffle execution detail confirming the DAST finding routed and enriched correctly.</figcaption>
     </figure>
     <figure class="case-figure">
-      <img src="../assets/img/responseone/18-dast-email-evidence.jpg" alt="Email notification showing the full pipeline run status across all four scanner jobs">
+      <img src="../assets/img/responseone/18-dast-email-evidence.png" alt="Email notification showing the full pipeline run status across all four scanner jobs">
       <figcaption>Email notification confirming the full pipeline run, all four jobs visible with their pass/fail status in one place.</figcaption>
     </figure>
   </section>
