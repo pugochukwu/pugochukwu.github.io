@@ -49,6 +49,10 @@
       <img src="../assets/img/medcore/01-the-challenge.jpg" alt="Slide showing MedCore's visibility gap: current state and why it matters">
       <figcaption>The visibility gap going in: no centralized logging, unnoticed anomalies, and growing exposure on payment APIs.</figcaption>
     </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/medcore/03-roadmap.jpg" alt="14-day delivery roadmap covering foundation, detection, validation, and reporting phases">
+      <figcaption>The 14-day delivery roadmap: foundation, detection, validation, and reporting phases.</figcaption>
+    </figure>
   </section>
 
   <section class="case-section">
@@ -77,11 +81,11 @@
     </p>
     <figure class="case-figure">
       <img src="../assets/img/medcore/02-proposed-architecture.jpg" alt="Proposed architecture diagram showing log sources flowing through Tailscale into the Wazuh, Action1, and Suricata core platform">
-      <figcaption>The proposed architecture: log sources, secure transport, core platform, and detection output.</figcaption>
+      <figcaption>The proposed architecture: log sources, secure transport via Tailscale, the Wazuh/Action1/Suricata core, and detection output.</figcaption>
     </figure>
     <figure class="case-figure">
-      <img src="../assets/img/medcore/05-enterprise-architecture.jpg" alt="Detailed enterprise technology architecture diagram for the MedCore monitoring environment">
-      <figcaption>The as-built enterprise architecture connecting on-premise, endpoint, and cloud log sources into a single detection platform.</figcaption>
+      <img src="../assets/img/medcore/04-scope-and-tools.jpg" alt="Table showing the tool stack, what each platform covers, and the scope boundaries of the 14-day build">
+      <figcaption>Tool stack and scope: what each platform covers and the boundaries of the 14-day proof of concept.</figcaption>
     </figure>
     <figure class="case-figure">
       <img src="../assets/img/medcore/06-tailscale-endpoints.jpg" alt="Tailscale admin console showing all four MedCore endpoints connected to the mesh network">
@@ -95,15 +99,64 @@
       The Wazuh manager, indexer, and dashboard were deployed on MED-SVR-L001, with agents
       rolled out across the Windows and Linux endpoints. Suricata was installed and configured on
       every endpoint, generating structured EVE JSON logs and feeding alerts back into the Wazuh
-      dashboard for correlation.
+      dashboard for correlation, with severity-based email alerting configured on top.
     </p>
     <figure class="case-figure">
-      <img src="../assets/img/medcore/08-suricata-linux-install.jpg" alt="Terminal output showing Suricata installation and rules database setup on a Linux endpoint">
-      <figcaption>Suricata installation and rules database setup on MED-SVR-L001.</figcaption>
+      <img src="../assets/img/medcore/14-wazuh-agents-onboarding.jpg" alt="Installing the Wazuh agent and registering it with the manager">
+      <figcaption>Installing the Wazuh agent and registering it with the manager on MED-SVR-L001.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/medcore/15-wazuh-agents-onboarding2.jpg" alt="Completing Wazuh agent enrollment and confirming the connection to the manager">
+      <figcaption>Completing agent enrollment and confirming the connection back to MED-SVR-L001.</figcaption>
     </figure>
     <figure class="case-figure">
       <img src="../assets/img/medcore/07-wazuh-dashboard.jpg" alt="Wazuh dashboard overview showing alert counts and MITRE ATT&CK breakdown for the newly onboarded endpoints">
       <figcaption>Wazuh dashboard overview after onboarding, showing alert volume and top MITRE ATT&amp;CK techniques observed.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/medcore/16-wazuh-agents-dashboard.jpg" alt="Wazuh dashboard confirming all four endpoints reporting in as active agents">
+      <figcaption>Wazuh dashboard confirming all four endpoints reporting in as active, connected agents.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/medcore/08-suricata-linux-install.jpg" alt="Terminal output showing Suricata installation and rules database setup on a Linux endpoint">
+      <figcaption>Suricata installation on MED-SVR-L001.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/medcore/18-suricata-rules.jpg" alt="Suricata rules database configured and loaded on the Linux endpoints">
+      <figcaption>Suricata rules database configured and loaded on the Linux endpoints.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/medcore/17-suricata-alerts.jpg" alt="Suricata alerts flowing into the Wazuh dashboard confirming network detection is live">
+      <figcaption>Suricata alerts flowing into the Wazuh dashboard, confirming network detection is live end to end.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/medcore/24-wazuh-email-alert-config.jpg" alt="Severity-based email alerting configured on the Wazuh server">
+      <figcaption>Severity-based email alerting configured on the Wazuh server, the notification channel used alongside the dashboard.</figcaption>
+    </figure>
+  </section>
+
+  <section class="case-section">
+    <h2>Cloud visibility (AWS &amp; Azure)</h2>
+    <p>
+      Alongside the endpoint and network layers, AWS CloudTrail and Azure Activity Log were
+      brought into the same Wazuh pipeline, so account and subscription-level activity in both
+      clouds is visible from the same dashboard the SOC analyst already uses.
+    </p>
+    <figure class="case-figure">
+      <img src="../assets/img/medcore/19-aws-setup.jpg" alt="AWS account set up to capture CloudTrail activity for the environment">
+      <figcaption>AWS account set up to capture CloudTrail activity for the environment.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/medcore/20-azure-setup.jpg" alt="Azure account set up to capture Activity Log events for the environment">
+      <figcaption>Azure account set up to capture Activity Log events for the environment.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/medcore/21-aws-azure-config.jpg" alt="AWS and Azure log ingestion configured on the Wazuh server">
+      <figcaption>AWS and Azure log ingestion configured on the Wazuh server.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/medcore/22-aws-azure-logs.jpg" alt="AWS CloudTrail and Azure Activity Log events confirmed flowing into the Wazuh dashboard">
+      <figcaption>AWS CloudTrail and Azure Activity Log events confirmed flowing into the Wazuh dashboard.</figcaption>
     </figure>
   </section>
 
@@ -113,6 +166,10 @@
       Atomic Red Team was used to safely reproduce three real-world attack patterns from
       MED-PC-L002 and confirm the monitoring stack actually detects them, not just logs activity.
     </p>
+    <figure class="case-figure">
+      <img src="../assets/img/medcore/23-atomicredteam-setup.jpg" alt="Atomic Red Team installed on MED-PC-L002, the host used to run all three attack simulations">
+      <figcaption>Atomic Red Team installed on MED-PC-L002, the host used to run all three attack simulations.</figcaption>
+    </figure>
     <table class="sla-table">
       <tr><th>Scenario</th><th>MITRE ATT&amp;CK ID</th><th>Status</th></tr>
       <tr><td>Brute force (SSH credential stuffing)</td><td>T1110.004</td><td>Confirmed on Wazuh dashboard + email</td></tr>
@@ -136,9 +193,18 @@
   <section class="case-section">
     <h2>Vulnerability visibility</h2>
     <p>
-      Action1 ran an initial vulnerability assessment across all four enrolled endpoints,
+      Action1 covered endpoint patch and vulnerability visibility across all four enrolled
+      endpoints, starting from an enrollment baseline before any remediation, through to a full
+      vulnerability assessment by severity.
+    </p>
+    <figure class="case-figure">
+      <img src="../assets/img/medcore/05-action1-baseline.jpg" alt="Action1 console showing all four endpoints enrolled and reporting for patch management before remediation">
+      <figcaption>Action1 baseline: all four endpoints enrolled and reporting for patch management, captured before remediation began. This shows enrollment and coverage, not a vulnerability count.</figcaption>
+    </figure>
+    <p>
+      Action1 then ran an initial vulnerability assessment across all four enrolled endpoints,
       surfacing 426 critical, 2,425 high, 2,473 medium, and 27 low severity findings to establish
-      a baseline for remediation.
+      a remediation baseline.
     </p>
     <figure class="case-figure">
       <img src="../assets/img/medcore/12-vulnerability-detection.jpg" alt="Wazuh vulnerability detection dashboard showing findings by severity across MedCore endpoints">
