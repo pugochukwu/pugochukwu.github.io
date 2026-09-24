@@ -1,0 +1,316 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ResponseOne DevSecOps Pipeline | Prince Ugochukwu</title>
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+
+<header class="site">
+  <div class="wrap">
+    <nav>
+      <a class="name" href="../index.html">Prince Ugochukwu</a>
+      <div class="links">
+        <a href="../index.html">Home</a>
+        <a href="../about.html">About</a>
+        <a href="../certifications.html">Certifications</a>
+        <a href="../tools.html">Tools</a>
+        <a class="current" href="../projects.html">Projects</a>
+      </div>
+    </nav>
+  </div>
+</header>
+
+<div class="wrap-wide">
+  <p class="breadcrumb"><a href="../projects.html">&larr; Back to Projects</a></p>
+
+  <section class="case-header">
+    <h1>ResponseOne: DevSecOps Pipeline &amp; SOAR Automation Platform</h1>
+    <p class="case-org">Expadox Limited internship, cohort 3</p>
+    <p class="case-meta">Team project &middot; GitHub Actions + Shuffle SOAR &middot; target app: OWASP Juice Shop</p>
+  </section>
+
+  <section class="case-section">
+    <h2>The problem</h2>
+    <p>
+      Most teams ship code with known vulnerabilities because security checks happen too late,
+      post-deployment, during a quarterly pen test, or never. ResponseOne's brief was to
+      instrument a real application with SAST, DAST, dependency scanning, and secrets detection
+      at the CI/CD level, then build a SOAR layer that ingests every finding, enriches it, and
+      triggers the right response automatically, without a human copying data between tools.
+    </p>
+    <figure class="case-figure">
+      <img src="../assets/img/responseone/01-juice-shop-target-app.jpg" alt="OWASP Juice Shop deliberately vulnerable web application running as the pipeline's target">
+      <figcaption>OWASP Juice Shop, the deliberately vulnerable target application the pipeline scans against.</figcaption>
+    </figure>
+  </section>
+
+  <section class="case-section">
+    <h2>My role</h2>
+    <p>Formal roles on the final report: Team Lead, Solution Architect, and Technical Lead. What that covered in practice:</p>
+    <h3 style="font-size:15px; font-weight:600; margin:24px 0 8px; color:var(--accent);">Originally assigned, and delivered</h3>
+    <ul class="role-list">
+      <li>Deploying and configuring the Shuffle SOAR platform on RES-SVR-L001</li>
+      <li>Building and debugging the "Critical CVE Alert" workflow, including diagnosing and fixing the Router/startnode structural bug</li>
+      <li>Designing and enforcing severity gates across all four scanner jobs (Secrets, SAST, SCA, DAST)</li>
+      <li>Building the automated playbooks (Secrets Alert, CVE Alert, OWASP Alert branches)</li>
+    </ul>
+    <h3 style="font-size:15px; font-weight:600; margin:24px 0 8px; color:var(--accent);">Absorbed beyond original scope, covering gaps in teammates' areas</h3>
+    <ul class="role-list">
+      <li>Scanner integration debugging: found and fixed the jq/logic bugs in the scanner jobs, including the riskdesc substring-matching defect in the DAST gate and a related SCA bug where the Shuffle-reporting step read the unfiltered finding array instead of the severity-filtered one</li>
+      <li>Environment and infrastructure troubleshooting: Docker networking faults, a port conflict with Wazuh's indexer, an OpenSearch health failure traced to container resource contention, ngrok tunnel stability, GitHub Codespace git conflicts, and workflow YAML syntax errors</li>
+      <li>Wrote every vulnerability finding entry (description, severity, CVSS, remediation) for Secrets, SAST, SCA, and DAST, plus the project's executive summary</li>
+      <li>Designed and executed the plant-detect-gate-alert verification method used consistently across all four scan types, including planting synthetic vulnerabilities where real ones weren't otherwise available, and narrowing scope to surface a genuine one where planting wasn't needed</li>
+      <li>Repeatedly diagnosed and resolved git branch divergence between local Codespace commits and remote edits made via the GitHub web editor</li>
+    </ul>
+  </section>
+
+  <section class="case-section">
+    <h2>SOAR platform and playbook build</h2>
+    <p>
+      Shuffle runs on RES-SVR-L001 as the automation core. Scanner findings from GitHub Actions
+      POST to a webhook, and three conditional branches route each finding to the right playbook:
+      a Secrets Alert straight to Slack, and a CVE or OWASP finding through NVD enrichment first
+      for full CVE/CVSS context before alerting.
+    </p>
+    <figure class="case-figure">
+      <img src="../assets/img/responseone/02-shuffle-soar-deployed.jpg" alt="Shuffle SOAR platform running with its containers healthy on RES-SVR-L001">
+      <figcaption>Shuffle deployed and healthy on RES-SVR-L001, the SOAR core for the whole pipeline.</figcaption>
+    </figure>
+    <p>
+      Two structural bugs surfaced while wiring the workflow, both fixed rather than worked around.
+      The first: an early version of the canvas had an unintended connection between branches that
+      would have caused cross-triggering. It was found during testing and corrected.
+    </p>
+    <figure class="case-figure">
+      <img src="../assets/img/responseone/03-branch-wiring-fix.jpg" alt="Shuffle canvas showing the branch connection corrected between conditional paths">
+      <figcaption>Correcting an unintended branch connection in the Shuffle canvas before it could misroute a finding.</figcaption>
+    </figure>
+    <p>
+      The second was more fundamental: Shuffle derives a workflow's startnode from the
+      <code>actions[0]</code>/graph structure rather than accepting a manually set
+      <code>start</code>/<code>isStartNode</code> value. With three parallel conditional branches
+      wired directly from the trigger, only one branch was ever structurally reachable, the CVE
+      and OWASP branches were silently skipped regardless of condition or payload, no error, just
+      no execution. The fix was to insert a single "Router" pass-through node between the trigger
+      and the three branches, funnelling every conditional path through it. Shuffle then correctly
+      assigned the Router as the startnode, resolving routing for all three branches.
+    </p>
+    <figure class="case-figure">
+      <img src="../assets/img/responseone/13-router-node-fix.jpg" alt="Shuffle canvas showing the Router pass-through node fixing the startnode bug that was skipping two of three branches">
+      <figcaption>The Router fix: all three branches now sit under a shared pass-through node, resolving the startnode bug.</figcaption>
+    </figure>
+    <p>
+      With NVD enrichment wired in, a full test using CVE-2021-44228 (Log4Shell) confirmed the
+      complete chain, enrichment lookup, CVSS/description detail, and a formatted Slack alert with
+      real context rather than raw JSON.
+    </p>
+    <figure class="case-figure">
+      <img src="../assets/img/responseone/04-cve-enrichment-slack-alert.jpg" alt="Slack alert showing full NVD-enriched CVE detail for CVE-2021-44228">
+      <figcaption>NVD-enriched CVE alert delivered to Slack with full CVSS and description detail.</figcaption>
+    </figure>
+  </section>
+
+  <section class="case-section">
+    <h2>CI/CD pipeline and severity gates</h2>
+    <p>
+      Four scanner jobs, Secrets (Gitleaks), SAST (Semgrep), SCA (Trivy), and DAST (OWASP ZAP),
+      run in GitHub Actions on every push, each gated to block the build on a High or Critical
+      finding.
+    </p>
+    <figure class="case-figure">
+      <img src="../assets/img/responseone/05-security-scanners-workflow.jpg" alt="GitHub Actions security-scanners.yml workflow defining the four scanner jobs">
+      <figcaption>The security-scanners.yml workflow defining all four scanner jobs.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/responseone/06-all-scanners-passing.jpg" alt="GitHub Actions run showing all four scanner jobs completing successfully">
+      <figcaption>All four scanner jobs completing end to end, confirming the pipeline is operational.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/responseone/07-severity-gates-sast-sca.jpg" alt="Severity gate logic added to the SAST and SCA jobs in the workflow YAML">
+      <figcaption>Severity gate logic added to the SAST and SCA jobs, blocking the build on High/Critical findings.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/responseone/26-severity-gates-secrets-dast.jpg" alt="Severity gate logic added to the Secrets and DAST jobs in the workflow YAML">
+      <figcaption>Severity gate logic added to the Secrets and DAST jobs, completing the gate set across all four scanners.</figcaption>
+    </figure>
+    <p>
+      Verifying the gates surfaced a real logic bug rather than just confirming they ran. The
+      DAST gate's <code>jq</code> query used <code>test("High")</code>, a substring match against
+      ZAP's full <code>riskdesc</code> field (format: <code>"&lt;Risk&gt; (&lt;Confidence&gt;)"</code>).
+      That incorrectly matched entries like <code>"Medium (High)"</code>, where "High" described
+      ZAP's confidence, not its risk rating, a false-positive block on a Medium-risk finding. The
+      fix anchored the match with <code>startswith("High")</code> instead, verified against both
+      the live report and a synthetic test confirming the corrected query isolates only genuine
+      High-risk entries.
+    </p>
+    <figure class="case-figure">
+      <img src="../assets/img/responseone/09-riskdesc-bug-fix.jpg" alt="GitHub Actions log showing the severity gate correctly blocking on a High-risk finding after the riskdesc bug fix">
+      <figcaption>The corrected gate blocking cleanly on a genuine High-risk finding, the first run where it reached real evaluation logic rather than failing on a script error.</figcaption>
+    </figure>
+  </section>
+
+  <section class="case-section">
+    <h2>Verifying all four scanners with real findings</h2>
+    <p>
+      Each scan type was verified the same way: plant or surface a genuine finding, confirm the
+      gate blocks the build, and confirm the alert reaches Shuffle and the notification channel
+      with accurate data, not just that the job ran without error.
+    </p>
+
+    <h3 style="font-size:16px; font-weight:600; margin:28px 0 10px;">Secrets (Gitleaks)</h3>
+    <p>
+      A synthetic AWS access key was planted in a test file to trigger detection. Gitleaks
+      flagged it, the gate blocked the job (secrets are always treated as Critical), and Slack
+      received a real-time alert with accurate repo, file, and line data.
+    </p>
+    <figure class="case-figure">
+      <img src="../assets/img/responseone/10-secrets-test-file-planted.jpg" alt="Creating and committing a test file containing a synthetic AWS access key to trigger the secrets scan">
+      <figcaption>Planting a synthetic AWS key to trigger the secrets scan, avoiding AWS's own allowlisted documentation placeholder.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/responseone/22-secrets-scan-completed.jpg" alt="Gitleaks secrets scan completing and the severity gate blocking the build on the detected secret">
+      <figcaption>Gitleaks detecting the planted secret and the severity gate blocking the build.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/responseone/11-secrets-slack-evidence.jpg" alt="Slack alerts confirming the secret detection with accurate repo, file, and line data">
+      <figcaption>Real-time Slack alerts confirming the secret detection with accurate file and line data.</figcaption>
+    </figure>
+
+    <h3 style="font-size:16px; font-weight:600; margin:28px 0 10px;">SAST (Semgrep)</h3>
+    <p>
+      A deliberate SQL injection pattern, an unsanitized string-concatenated query, was planted
+      in a test file. Semgrep flagged it as the sole error-level finding, the gate blocked the
+      job, and the alert reached Shuffle with the exact rule and file that triggered it.
+    </p>
+    <figure class="case-figure">
+      <img src="../assets/img/responseone/12-sast-test-file-planted.jpg" alt="Creating the SAST Semgrep test file with a planted SQL injection pattern">
+      <figcaption>Planting a known SQL injection pattern to give Semgrep a genuine error-level finding to catch.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/responseone/14-sast-shuffle-evidence.jpg" alt="Shuffle execution details showing the exact Semgrep rule, file, and repo that triggered the SAST alert">
+      <figcaption>Shuffle execution detail confirming the exact rule (sqlalchemy-execute-raw-query) and file that triggered the alert.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/responseone/21-sast-slack-evidence.jpg" alt="Slack alert confirming the SAST finding with rule and file detail">
+      <figcaption>Slack alert confirming the SAST finding, matching the rule and file Shuffle received.</figcaption>
+    </figure>
+
+    <h3 style="font-size:16px; font-weight:600; margin:28px 0 10px;">SCA (Trivy)</h3>
+    <p>
+      Juice Shop ships as a prebuilt container with no manifest for Trivy to scan, so a synthetic
+      <code>package.json</code> declaring lodash 4.17.4, a version with a known Critical prototype
+      pollution CVE, was planted to give Trivy a real dependency to flag.
+    </p>
+    <figure class="case-figure">
+      <img src="../assets/img/responseone/15-sca-vulnerable-dependency-planted.jpg" alt="Planting the outdated lodash 4.17.4 dependency in package.json to trigger the SCA scan">
+      <figcaption>Planting a known-vulnerable lodash version, confirmed by npm's own audit output before Trivy ever ran.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/responseone/16-sca-scan-completed.jpg" alt="Trivy SCA scan completing and correctly flagging the planted vulnerable dependency">
+      <figcaption>Trivy correctly flagging CVE-2019-10744 (CVSS 9.1) and the gate blocking on the Critical finding.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/responseone/20-sca-slack-evidence.jpg" alt="Slack alert confirming the SCA finding for the planted lodash CVE">
+      <figcaption>Slack alert confirming the SCA finding for the planted lodash CVE.</figcaption>
+    </figure>
+
+    <h3 style="font-size:16px; font-weight:600; margin:28px 0 10px;">DAST (OWASP ZAP)</h3>
+    <p>
+      The baseline ZAP scan came back clean, leaving no genuine High-severity finding to verify
+      against. Rather than fabricate one, the scan was switched from passive baseline mode to an
+      active full scan against Juice Shop's known-vulnerable endpoints, surfacing two real
+      High-severity findings: SQL Injection and Source Code Disclosure via File Inclusion.
+    </p>
+    <figure class="case-figure">
+      <img src="../assets/img/responseone/17-dast-full-scan-switch.jpg" alt="Switching the ZAP scan step from action-baseline to action-full-scan on the GitHub Codespace terminal">
+      <figcaption>Switching to an active ZAP full scan after the passive baseline scan returned no genuine High-risk finding.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/responseone/23-dast-scan-completed.jpg" alt="ZAP full scan completing with the two genuine High-severity findings and the gate blocking the build">
+      <figcaption>The full ZAP scan completing, both High-severity findings caught, and the gate blocking the build.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/responseone/24-dast-slack-evidence.jpg" alt="Slack alert confirming the DAST findings with risk and confidence detail">
+      <figcaption>Slack alert confirming the DAST findings, correctly isolated to genuine High-risk entries after the riskdesc fix.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/responseone/25-dast-shuffle-evidence.jpg" alt="Shuffle execution details showing the DAST finding routed and enriched correctly">
+      <figcaption>Shuffle execution detail confirming the DAST finding routed and enriched correctly.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/responseone/18-dast-email-evidence.jpg" alt="Email notification showing the full pipeline run status across all four scanner jobs">
+      <figcaption>Email notification confirming the full pipeline run, all four jobs visible with their pass/fail status in one place.</figcaption>
+    </figure>
+  </section>
+
+  <section class="case-section">
+    <h2>Challenges and resolutions</h2>
+    <p>Beyond the two Shuffle structural bugs and the riskdesc gate defect above, verification surfaced a steady stream of environment and logic issues, each diagnosed from logs and host-level diagnostics rather than assumption:</p>
+    <ul class="role-list">
+      <li>Docker wasn't pre-installed on RES-SVR-L001 despite the initial assumption it would be, installed from Docker's official repository before deployment could begin</li>
+      <li>OpenSearch failed to bind to port 9200 because Wazuh's indexer already held it, resolved by fully purging Wazuh, which wasn't needed for this project</li>
+      <li>A 502 on the Shuffle webhook traced back to OpenSearch failing to reach a healthy state under CPU contention from a backlog of Orborus-spawned execution containers, resolved with a full docker compose down/up cycle</li>
+      <li>RES-SVR-L001 sits behind NAT with no public IP, making the Shuffle webhook unreachable from GitHub's cloud runners, resolved with an ngrok tunnel that stayed stable across a full host restart</li>
+      <li>A missing <code>continue-on-error</code> on the ZAP step and missing closing <code>fi</code> statements in nested bash conditionals caused job failures on three separate occasions across the DAST job alone</li>
+      <li>A prior file edit accidentally removed the permissions block required for SARIF upload, breaking two scanner jobs with access errors after an otherwise clean merge</li>
+      <li>The "Send to Shuffle" step originally triggered on any alert rather than specifically High-risk ones, firing with null alert data whenever only Medium/Low findings were present, fixed by aligning the trigger to the same threshold the gate itself uses</li>
+    </ul>
+    <p>
+      Fixes were tested on isolated branches before merging into main, a practice adopted after
+      an early direct-to-main merge introduced two untested regressions at once.
+    </p>
+  </section>
+
+  <section class="case-section">
+    <h2>Dashboard and outcome</h2>
+    <p>
+      Shuffle's built-in dashboard tracked workflow executions directly, no separate
+      Grafana/Prometheus stack needed. At the point captured below: 9 workflows, 100% success
+      rate, 0 failed runs, and 257 total workflow executions.
+    </p>
+    <figure class="case-figure">
+      <img src="../assets/img/responseone/19-shuffle-dashboard-metrics.jpg" alt="Shuffle dashboard showing 9 workflows, 100 percent success rate, and 257 total executions">
+      <figcaption>Shuffle's live dashboard: 9 workflows, 100% success rate, 257 executions.</figcaption>
+    </figure>
+  </section>
+
+  <section class="case-section" style="border-bottom:none;">
+    <h2>Brief vs. delivered</h2>
+    <p>
+      The brief called for four scanners gating every commit, SOAR ingestion with no manual
+      import, CVE/CVSS enrichment, three automated playbooks, a live dashboard, and a
+      before/after MTTT comparison. What shipped matches the core of that closely: all four
+      scanners gate real commits with live-tested logic bugs found and fixed rather than assumed
+      away, ingestion runs webhook to webhook with zero manual steps, enrichment pulls real NVD
+      data, and all three playbooks (Secrets, CVE, OWASP) are wired and verified with evidence
+      across GitHub Actions, Shuffle, Slack, and email.
+    </p>
+    <p>
+      A few brief items aren't clearly evidenced in the final report as delivered: an explicit
+      before/after MTTT figure with methodology, demonstrated deduplication logic across reruns,
+      and a written threat model of the pipeline itself (what happens if a scanner is tampered
+      with or bypassed). Worth being upfront about that gap rather than claiming it's covered
+      when the report doesn't show it.
+    </p>
+    <p>
+      The full project report, including every finding write-up, the complete challenges log,
+      and additional screenshots, is documented on Notion.
+    </p>
+    <p>
+      <a href="https://app.notion.com/p/Expadox-Project-3-ResponseOne-3d79567e4514801a87a2d6b101286101" target="_blank" rel="noopener">View full report on Notion &rarr;</a>
+    </p>
+  </section>
+
+</div>
+
+<footer class="site">
+  <div class="wrap">
+    Built and maintained by Prince Ugochukwu.
+  </div>
+</footer>
+
+</body>
+</html>
