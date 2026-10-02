@@ -59,7 +59,7 @@
       internet.
     </p>
     <figure class="case-figure">
-      <img src="../assets/img/homesocfoundation/00-network-architecture.jpg" alt="Home SOC security monitoring architecture diagram showing four endpoints, the Wazuh manager, and Action1 cloud">
+      <img src="../assets/img/homesocfoundation/00-network-architecture.png" alt="Home SOC security monitoring architecture diagram showing four endpoints, the Wazuh manager, and Action1 cloud">
       <figcaption>The as-built architecture: four endpoints, each running Wazuh Agent, Suricata, Action1, and Tailscale, with HOM-PC-L003 hosting the Wazuh Manager, Indexer, and Dashboard, plus Zeek on the two Linux hosts.</figcaption>
     </figure>
   </section>
@@ -99,15 +99,15 @@
       agent enrollment (1515/tcp), the Manager API (55000/tcp), and dashboard access (443/tcp).
     </p>
     <figure class="case-figure">
-      <img src="../assets/img/homesocfoundation/01-wazuh-install-config.jpg" alt="Terminal output showing the Wazuh install and firewall configuration commands">
+      <img src="../assets/img/homesocfoundation/01-wazuh-install-config.png" alt="Terminal output showing the Wazuh install and firewall configuration commands">
       <figcaption>Wazuh install and firewall configuration on HOM-PC-L003.</figcaption>
     </figure>
     <figure class="case-figure">
-      <img src="../assets/img/homesocfoundation/02-wazuh-dashboard-login-page.jpg" alt="Wazuh dashboard login page loading successfully after installation">
+      <img src="../assets/img/homesocfoundation/02-wazuh-dashboard-login-page.png" alt="Wazuh dashboard login page loading successfully after installation">
       <figcaption>Wazuh fully installed and the dashboard login page loading.</figcaption>
     </figure>
     <figure class="case-figure">
-      <img src="../assets/img/homesocfoundation/03-wazuh-dashboard-login-success.jpg" alt="Successful login to the Wazuh dashboard">
+      <img src="../assets/img/homesocfoundation/03-wazuh-dashboard-login-success.png" alt="Successful login to the Wazuh dashboard">
       <figcaption>Successful login to the Wazuh dashboard, confirming the SIEM core is live.</figcaption>
     </figure>
   </section>
@@ -121,43 +121,43 @@
       network adapter by friendly name instead of its Npcap device identifier.
     </p>
     <figure class="case-figure">
-      <img src="../assets/img/homesocfoundation/04-suricata-l003-rules-loaded.jpg" alt="Suricata on HOM-PC-L003 confirming 52,902 rules successfully loaded">
+      <img src="../assets/img/homesocfoundation/04-suricata-l003-rules-loaded.png" alt="Suricata on HOM-PC-L003 confirming 52,902 rules successfully loaded">
       <figcaption>Suricata on HOM-PC-L003: 52,902 rules loaded successfully, 0 failed, 0 skipped.</figcaption>
     </figure>
     <figure class="case-figure">
-      <img src="../assets/img/homesocfoundation/05-suricata-l002-rules-downloaded.jpg" alt="Suricata rules downloaded on HOM-PC-L002">
+      <img src="../assets/img/homesocfoundation/05-suricata-l002-rules-downloaded.png" alt="Suricata rules downloaded on HOM-PC-L002">
       <figcaption>Suricata rules downloaded on HOM-PC-L002.</figcaption>
     </figure>
     <figure class="case-figure">
-      <img src="../assets/img/homesocfoundation/06-suricata-l002-service-running.jpg" alt="Suricata service confirmed running on HOM-PC-L002 after restart">
+      <img src="../assets/img/homesocfoundation/06-suricata-l002-service-running.png" alt="Suricata service confirmed running on HOM-PC-L002 after restart">
       <figcaption>Suricata service confirmed running on HOM-PC-L002 after restart.</figcaption>
     </figure>
     <figure class="case-figure">
-      <img src="../assets/img/homesocfoundation/07-suricata-w004-wazuh-integration.jpg" alt="Wazuh ingesting Suricata eve.json alerts on HOM-SVR-W004 with severity and MITRE mapping">
+      <img src="../assets/img/homesocfoundation/07-suricata-w004-wazuh-integration.png" alt="Wazuh ingesting Suricata eve.json alerts on HOM-SVR-W004 with severity and MITRE mapping">
       <figcaption>Wazuh ingesting Suricata's eve.json alerts via its native decoder on HOM-SVR-W004, classified with severity and MITRE mapping, confirming the Suricata-to-Wazuh integration end to end.</figcaption>
     </figure>
     <figure class="case-figure">
-      <img src="../assets/img/homesocfoundation/08-suricata-w001-et-rules-installed.jpg" alt="Emerging Threats Open ruleset installed on HOM-PC-W001">
+      <img src="../assets/img/homesocfoundation/08-suricata-w001-et-rules-installed.png" alt="Emerging Threats Open ruleset installed on HOM-PC-W001">
       <figcaption>Emerging Threats Open ruleset installed on HOM-PC-W001, the last of the four endpoints to come online.</figcaption>
     </figure>
     <figure class="case-figure">
-      <img src="../assets/img/homesocfoundation/09-suricata-w001-traffic-simulation.jpg" alt="Simulating network traffic on HOM-PC-W001 to prove Suricata is capturing live traffic">
+      <img src="../assets/img/homesocfoundation/09-suricata-w001-traffic-simulation.png" alt="Simulating network traffic on HOM-PC-W001 to prove Suricata is capturing live traffic">
       <figcaption>Simulating traffic on HOM-PC-W001 to prove Suricata is capturing live, not just configured.</figcaption>
     </figure>
     <figure class="case-figure">
-      <img src="../assets/img/homesocfoundation/10-suricata-w001-alert-on-wazuh-manager.jpg" alt="GPL ATTACK_RESPONSE id check returned root alert confirmed on the Wazuh Manager">
+      <img src="../assets/img/homesocfoundation/10-suricata-w001-alert-on-wazuh-manager.png" alt="GPL ATTACK_RESPONSE id check returned root alert confirmed on the Wazuh Manager">
       <figcaption>The "GPL ATTACK_RESPONSE id check returned root" test alert confirmed on the Wazuh Manager (HOM-PC-L003).</figcaption>
     </figure>
     <figure class="case-figure">
-      <img src="../assets/img/homesocfoundation/11-suricata-w001-alert-wazuh-dashboard.jpg" alt="The simulated attack alert visible on the Wazuh dashboard">
+      <img src="../assets/img/homesocfoundation/11-suricata-w001-alert-wazuh-dashboard.png" alt="The simulated attack alert visible on the Wazuh dashboard">
       <figcaption>The same simulated attack firing alerts visible on the Wazuh dashboard, captured from both HOM-PC-W001 and HOM-SVR-W004.</figcaption>
     </figure>
     <figure class="case-figure">
-      <img src="../assets/img/homesocfoundation/12-suricata-w001-live-traffic-capture.jpg" alt="Live attack simulation traffic captured by Suricata on HOM-PC-W001">
+      <img src="../assets/img/homesocfoundation/12-suricata-w001-live-traffic-capture.png" alt="Live attack simulation traffic captured by Suricata on HOM-PC-W001">
       <figcaption>Live attack simulation traffic captured directly by the Suricata sensor on HOM-PC-W001.</figcaption>
     </figure>
     <figure class="case-figure">
-      <img src="../assets/img/homesocfoundation/13-suricata-all-endpoints-reporting.jpg" alt="All four endpoints confirmed reporting live Suricata traffic">
+      <img src="../assets/img/homesocfoundation/13-suricata-all-endpoints-reporting.png" alt="All four endpoints confirmed reporting live Suricata traffic">
       <figcaption>All four endpoints confirmed reporting live traffic, Suricata is fully operational across the lab.</figcaption>
     </figure>
   </section>
@@ -170,11 +170,11 @@
       rather than feeding into it directly.
     </p>
     <figure class="case-figure">
-      <img src="../assets/img/homesocfoundation/14-action1-l003-deployed.jpg" alt="Action1 deployed on HOM-PC-L003">
+      <img src="../assets/img/homesocfoundation/14-action1-l003-deployed.png" alt="Action1 deployed on HOM-PC-L003">
       <figcaption>Action1 deployed on HOM-PC-L003, the first endpoint onboarded.</figcaption>
     </figure>
     <figure class="case-figure">
-      <img src="../assets/img/homesocfoundation/15-action1-enrollment-complete.jpg" alt="Action1 enrollment complete across all four lab endpoints">
+      <img src="../assets/img/homesocfoundation/15-action1-enrollment-complete.png" alt="Action1 enrollment complete across all four lab endpoints">
       <figcaption>Action1 enrollment complete across all four endpoints: HOM-PC-L002, HOM-PC-L003, HOM-SVR-W004, and HOM-PC-W001.</figcaption>
     </figure>
   </section>
@@ -186,11 +186,11 @@
       its dashboard without exposing any host directly to the internet.
     </p>
     <figure class="case-figure">
-      <img src="../assets/img/homesocfoundation/16-tailscale-l003-installed.jpg" alt="Tailscale installed on HOM-PC-L003">
+      <img src="../assets/img/homesocfoundation/16-tailscale-l003-installed.png" alt="Tailscale installed on HOM-PC-L003">
       <figcaption>Tailscale installed on HOM-PC-L003, the Wazuh Manager host.</figcaption>
     </figure>
     <figure class="case-figure">
-      <img src="../assets/img/homesocfoundation/17-tailscale-enrollment-complete.jpg" alt="Tailscale enrollment complete across all four lab endpoints">
+      <img src="../assets/img/homesocfoundation/17-tailscale-enrollment-complete.png" alt="Tailscale enrollment complete across all four lab endpoints">
       <figcaption>Final enrollment check: all four endpoints connected to the Tailscale network.</figcaption>
     </figure>
   </section>
@@ -202,15 +202,15 @@
       then verified directly in Event Viewer before confirming it was reaching Wazuh.
     </p>
     <figure class="case-figure">
-      <img src="../assets/img/homesocfoundation/18-sysmon-event-viewer-verification.jpg" alt="Sysmon Process Creation events visible in Windows Event Viewer">
+      <img src="../assets/img/homesocfoundation/18-sysmon-event-viewer-verification.png" alt="Sysmon Process Creation events visible in Windows Event Viewer">
       <figcaption>Sysmon verified in Event Viewer: Process Creation (Event ID 1) and network events streaming into the Microsoft-Windows-Sysmon/Operational log.</figcaption>
     </figure>
     <figure class="case-figure">
-      <img src="../assets/img/homesocfoundation/19-sysmon-w004-deployed.jpg" alt="Sysmon installed, configured, and verified running on HOM-SVR-W004">
+      <img src="../assets/img/homesocfoundation/19-sysmon-w004-deployed.png" alt="Sysmon installed, configured, and verified running on HOM-SVR-W004">
       <figcaption>Sysmon installed, configured, and confirmed running on HOM-SVR-W004.</figcaption>
     </figure>
     <figure class="case-figure">
-      <img src="../assets/img/homesocfoundation/20-sysmon-wazuh-alert-confirmed.jpg" alt="Sysmon alerting from both Windows machines confirmed on the Wazuh Manager">
+      <img src="../assets/img/homesocfoundation/20-sysmon-wazuh-alert-confirmed.png" alt="Sysmon alerting from both Windows machines confirmed on the Wazuh Manager">
       <figcaption>Sysmon alerting from both Windows machines to the Wazuh Manager, confirmed end to end.</figcaption>
     </figure>
   </section>
@@ -222,11 +222,11 @@
       endpoints reporting into the manager on HOM-PC-L003.
     </p>
     <figure class="case-figure">
-      <img src="../assets/img/homesocfoundation/21-wazuh-agents-onboarded.jpg" alt="Wazuh agents successfully onboarded on the monitored endpoints">
+      <img src="../assets/img/homesocfoundation/21-wazuh-agents-onboarded.png" alt="Wazuh agents successfully onboarded on the monitored endpoints">
       <figcaption>Wazuh Agent successfully onboarded across the monitored endpoints.</figcaption>
     </figure>
     <figure class="case-figure">
-      <img src="../assets/img/homesocfoundation/22-wazuh-agents-active-status.jpg" alt="Wazuh agents showing active status on the manager">
+      <img src="../assets/img/homesocfoundation/22-wazuh-agents-active-status.png" alt="Wazuh agents showing active status on the manager">
       <figcaption>All onboarded agents confirmed active on the Wazuh Manager.</figcaption>
     </figure>
   </section>
@@ -239,23 +239,23 @@
       which is worth showing rather than hiding.
     </p>
     <figure class="case-figure">
-      <img src="../assets/img/homesocfoundation/23-zeek-l003-live-capture-confirmed.jpg" alt="Zeek live traffic capture confirmed through conn.log entries on HOM-PC-L003">
+      <img src="../assets/img/homesocfoundation/23-zeek-l003-live-capture-confirmed.png" alt="Zeek live traffic capture confirmed through conn.log entries on HOM-PC-L003">
       <figcaption>Zeek live capture confirmed on HOM-PC-L003 through entries appearing in conn.log.</figcaption>
     </figure>
     <figure class="case-figure">
-      <img src="../assets/img/homesocfoundation/24-zeek-l002-deployed-capturing.jpg" alt="Zeek deployed and capturing live network traffic on HOM-PC-L002">
+      <img src="../assets/img/homesocfoundation/24-zeek-l002-deployed-capturing.png" alt="Zeek deployed and capturing live network traffic on HOM-PC-L002">
       <figcaption>Zeek deployed and verified capturing live traffic on HOM-PC-L002.</figcaption>
     </figure>
     <figure class="case-figure">
-      <img src="../assets/img/homesocfoundation/25-zeek-l002-initial-packet-loss-notice.jpg" alt="Zeek CaptureLoss notice fired instead of a scan detection on the first simulated nmap scan">
+      <img src="../assets/img/homesocfoundation/25-zeek-l002-initial-packet-loss-notice.png" alt="Zeek CaptureLoss notice fired instead of a scan detection on the first simulated nmap scan">
       <figcaption>The first simulated nmap scan didn't trigger a scan-detection notice, instead surfacing Zeek's own CaptureLoss::Too_Much_Loss notice at over 28% packet loss, a genuine troubleshooting step rather than an immediate clean result.</figcaption>
     </figure>
     <figure class="case-figure">
-      <img src="../assets/img/homesocfoundation/26-zeek-scan-detection-confirmed.jpg" alt="Wazuh dashboard confirming a genuine Zeek Scan::Port_Scan detection">
+      <img src="../assets/img/homesocfoundation/26-zeek-scan-detection-confirmed.png" alt="Wazuh dashboard confirming a genuine Zeek Scan::Port_Scan detection">
       <figcaption>The confirmed detection: rule.id 100101, data.note Scan::Port_Scan, 192.168.100.97 scanned at least 20 unique ports, visible in the Wazuh dashboard.</figcaption>
     </figure>
     <figure class="case-figure">
-      <img src="../assets/img/homesocfoundation/27-zeek-l003-full-validation.jpg" alt="Full Zeek scan-detection stack validated on HOM-PC-L003 with JSON logging and increased capture buffer">
+      <img src="../assets/img/homesocfoundation/27-zeek-l003-full-validation.png" alt="Full Zeek scan-detection stack validated on HOM-PC-L003 with JSON logging and increased capture buffer">
       <figcaption>Full Zeek scan-detection stack validated on HOM-PC-L003, JSON logging and an increased capture buffer applied upfront based on the lessons learned from HOM-PC-L002.</figcaption>
     </figure>
     <p style="margin-top: 24px;">
