@@ -1,0 +1,286 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Home SOC Foundation | Prince Ugochukwu</title>
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+
+<header class="site">
+  <div class="wrap">
+    <nav>
+      <a class="name" href="../index.html">Prince Ugochukwu</a>
+      <div class="links">
+        <a href="../index.html">Home</a>
+        <a href="../about.html">About</a>
+        <a href="../certifications.html">Certifications</a>
+        <a href="../tools.html">Tools</a>
+        <a class="current" href="../projects.html">Projects</a>
+      </div>
+    </nav>
+  </div>
+</header>
+
+<div class="wrap-wide">
+  <p class="breadcrumb"><a href="../projects.html">&larr; Back to Projects</a></p>
+
+  <section class="case-header">
+    <h1>Four-Endpoint Home SOC Setup</h1>
+    <p class="case-org">Home SOC Lab Pack &middot; Lab 9, built first as the foundation for Labs 1-8</p>
+    <p class="case-meta">Solo build &middot; 4 endpoints across 2 physical hosts &middot; Wazuh, Sysmon, Suricata, Zeek, Action1, Tailscale</p>
+  </section>
+
+  <section class="case-section">
+    <h2>Why this lab came first</h2>
+    <p>
+      Every one of the nine labs in this pack assumes a working detection and response platform
+      already exists underneath it. A brute force detection lab needs somewhere to send failed
+      logon events. A phishing investigation lab needs mail and endpoint telemetry already
+      flowing somewhere. Rather than build each lab on an ad hoc setup, this one, a fully
+      self-hosted monitoring environment across four endpoints, two Windows and two Linux, split
+      across two physical host machines, came first. It isn't one project among nine, it's the
+      platform the other eight run on top of.
+    </p>
+    <p>
+      Every sensor, Sysmon, Suricata, Zeek, the Wazuh agents, was installed and then independently
+      verified with real evidence: an actual alert generated, correctly classified, and traced
+      end to end into the dashboard, not just a service showing "active."
+    </p>
+  </section>
+
+  <section class="case-section">
+    <h2>Network architecture</h2>
+    <p>
+      Four endpoints across two physical hosts, bridged networking rather than NAT or host-only
+      so the topology could actually span both machines, with Tailscale layered on top for secure
+      remote access to the lab and its dashboard without exposing any host directly to the
+      internet.
+    </p>
+    <figure class="case-figure">
+      <img src="../assets/img/homesocfoundation/00-network-architecture.jpg" alt="Home SOC security monitoring architecture diagram showing four endpoints, the Wazuh manager, and Action1 cloud">
+      <figcaption>The as-built architecture: four endpoints, each running Wazuh Agent, Suricata, Action1, and Tailscale, with HOM-PC-L003 hosting the Wazuh Manager, Indexer, and Dashboard, plus Zeek on the two Linux hosts.</figcaption>
+    </figure>
+  </section>
+
+  <section class="case-section">
+    <h2>Environment provisioning</h2>
+    <p>
+      Before any security tooling went in, the base environment itself had to be built: Windows
+      Server and Windows 11 ISOs downloaded and verified, then four virtual machines provisioned
+      and onboarded across two physical hosts, HOM-PC-W001 (Windows 11, 2 vCPU, 4GB RAM, 64GB
+      storage), HOM-SVR-W004 (Windows Server 2022, 2 vCPU, 4GB RAM, 60GB storage), HOM-PC-L002
+      (Ubuntu 22.04.5 LTS, 2 vCPU, 4GB RAM, 40GB storage), and HOM-PC-L003 (Ubuntu 22.04.5 LTS, 2
+      vCPU, 4GB RAM, 60GB storage, designated as the Wazuh Manager host). Routine installer and
+      provisioning screenshots aren't included here since they don't add evidentiary value beyond
+      this summary, the sections below pick up from the first piece of actual security tooling.
+    </p>
+  </section>
+
+  <section class="case-section">
+    <h2>Technology stack and rationale</h2>
+    <ul class="role-list">
+      <li><strong>Wazuh</strong>: the SIEM core, open source, combines log collection, correlation, and visualization without a separate ELK stack</li>
+      <li><strong>Sysmon</strong>: deployed on both Windows endpoints for host-level telemetry standard Windows auditing misses, full process creation with command line, parent-child lineage, and file/network events</li>
+      <li><strong>Suricata</strong>: signature-based network IDS using the Emerging Threats Open ruleset, deployed on all four endpoints in AF_PACKET (Linux) or Npcap (Windows) capture mode</li>
+      <li><strong>Zeek</strong>: protocol-level network visibility and scan detection, complementing Suricata's signature matching with connection metadata and behavioural analysis, deployed on the two Linux hosts</li>
+      <li><strong>Action1</strong>: patch and RMM layer, run as an independent SaaS control plane rather than feeding into Wazuh directly, deliberately kept as a separate pane of glass</li>
+      <li><strong>Tailscale</strong>: encrypted mesh overlay for secure remote access to the lab without exposing any host to the internet, confirmed not to carry local telemetry</li>
+      <li><strong>Bridged networking</strong>: selected over NAT or host-only once the four VMs were confirmed split across two physical hosts, a topology NAT and host-only networks can't span, with promiscuous mode enabled for full packet visibility</li>
+    </ul>
+  </section>
+
+  <section class="case-section">
+    <h2>Wazuh Manager deployment</h2>
+    <p>
+      Wazuh 4.14 was installed as a single-node, all-in-one deployment, manager, indexer, and
+      dashboard, on HOM-PC-L003, with firewall access configured for agent events (1514/tcp),
+      agent enrollment (1515/tcp), the Manager API (55000/tcp), and dashboard access (443/tcp).
+    </p>
+    <figure class="case-figure">
+      <img src="../assets/img/homesocfoundation/01-wazuh-install-config.jpg" alt="Terminal output showing the Wazuh install and firewall configuration commands">
+      <figcaption>Wazuh install and firewall configuration on HOM-PC-L003.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/homesocfoundation/02-wazuh-dashboard-login-page.jpg" alt="Wazuh dashboard login page loading successfully after installation">
+      <figcaption>Wazuh fully installed and the dashboard login page loading.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/homesocfoundation/03-wazuh-dashboard-login-success.jpg" alt="Successful login to the Wazuh dashboard">
+      <figcaption>Successful login to the Wazuh dashboard, confirming the SIEM core is live.</figcaption>
+    </figure>
+  </section>
+
+  <section class="case-section">
+    <h2>Suricata IDS across all four endpoints</h2>
+    <p>
+      Suricata 8.0.7 was deployed on every endpoint. On the Linux hosts it loaded 52,902
+      Emerging Threats Open signatures without failures; on the Windows hosts, Npcap handled
+      packet capture after resolving an initial access violation caused by referencing the
+      network adapter by friendly name instead of its Npcap device identifier.
+    </p>
+    <figure class="case-figure">
+      <img src="../assets/img/homesocfoundation/04-suricata-l003-rules-loaded.jpg" alt="Suricata on HOM-PC-L003 confirming 52,902 rules successfully loaded">
+      <figcaption>Suricata on HOM-PC-L003: 52,902 rules loaded successfully, 0 failed, 0 skipped.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/homesocfoundation/05-suricata-l002-rules-downloaded.jpg" alt="Suricata rules downloaded on HOM-PC-L002">
+      <figcaption>Suricata rules downloaded on HOM-PC-L002.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/homesocfoundation/06-suricata-l002-service-running.jpg" alt="Suricata service confirmed running on HOM-PC-L002 after restart">
+      <figcaption>Suricata service confirmed running on HOM-PC-L002 after restart.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/homesocfoundation/07-suricata-w004-wazuh-integration.jpg" alt="Wazuh ingesting Suricata eve.json alerts on HOM-SVR-W004 with severity and MITRE mapping">
+      <figcaption>Wazuh ingesting Suricata's eve.json alerts via its native decoder on HOM-SVR-W004, classified with severity and MITRE mapping, confirming the Suricata-to-Wazuh integration end to end.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/homesocfoundation/08-suricata-w001-et-rules-installed.jpg" alt="Emerging Threats Open ruleset installed on HOM-PC-W001">
+      <figcaption>Emerging Threats Open ruleset installed on HOM-PC-W001, the last of the four endpoints to come online.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/homesocfoundation/09-suricata-w001-traffic-simulation.jpg" alt="Simulating network traffic on HOM-PC-W001 to prove Suricata is capturing live traffic">
+      <figcaption>Simulating traffic on HOM-PC-W001 to prove Suricata is capturing live, not just configured.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/homesocfoundation/10-suricata-w001-alert-on-wazuh-manager.jpg" alt="GPL ATTACK_RESPONSE id check returned root alert confirmed on the Wazuh Manager">
+      <figcaption>The "GPL ATTACK_RESPONSE id check returned root" test alert confirmed on the Wazuh Manager (HOM-PC-L003).</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/homesocfoundation/11-suricata-w001-alert-wazuh-dashboard.jpg" alt="The simulated attack alert visible on the Wazuh dashboard">
+      <figcaption>The same simulated attack firing alerts visible on the Wazuh dashboard, captured from both HOM-PC-W001 and HOM-SVR-W004.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/homesocfoundation/12-suricata-w001-live-traffic-capture.jpg" alt="Live attack simulation traffic captured by Suricata on HOM-PC-W001">
+      <figcaption>Live attack simulation traffic captured directly by the Suricata sensor on HOM-PC-W001.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/homesocfoundation/13-suricata-all-endpoints-reporting.jpg" alt="All four endpoints confirmed reporting live Suricata traffic">
+      <figcaption>All four endpoints confirmed reporting live traffic, Suricata is fully operational across the lab.</figcaption>
+    </figure>
+  </section>
+
+  <section class="case-section">
+    <h2>Action1 patch management</h2>
+    <p>
+      Action1 was deployed as an independent SaaS RMM layer across all four endpoints, added for
+      software inventory and patch-management visibility, kept deliberately separate from Wazuh
+      rather than feeding into it directly.
+    </p>
+    <figure class="case-figure">
+      <img src="../assets/img/homesocfoundation/14-action1-l003-deployed.jpg" alt="Action1 deployed on HOM-PC-L003">
+      <figcaption>Action1 deployed on HOM-PC-L003, the first endpoint onboarded.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/homesocfoundation/15-action1-enrollment-complete.jpg" alt="Action1 enrollment complete across all four lab endpoints">
+      <figcaption>Action1 enrollment complete across all four endpoints: HOM-PC-L002, HOM-PC-L003, HOM-SVR-W004, and HOM-PC-W001.</figcaption>
+    </figure>
+  </section>
+
+  <section class="case-section">
+    <h2>Tailscale secure connectivity</h2>
+    <p>
+      Tailscale was installed on all four hosts to provide encrypted remote access to the lab and
+      its dashboard without exposing any host directly to the internet.
+    </p>
+    <figure class="case-figure">
+      <img src="../assets/img/homesocfoundation/16-tailscale-l003-installed.jpg" alt="Tailscale installed on HOM-PC-L003">
+      <figcaption>Tailscale installed on HOM-PC-L003, the Wazuh Manager host.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/homesocfoundation/17-tailscale-enrollment-complete.jpg" alt="Tailscale enrollment complete across all four lab endpoints">
+      <figcaption>Final enrollment check: all four endpoints connected to the Tailscale network.</figcaption>
+    </figure>
+  </section>
+
+  <section class="case-section">
+    <h2>Sysmon Windows telemetry</h2>
+    <p>
+      Sysmon was deployed on both Windows hosts using the SwiftOnSecurity configuration template,
+      then verified directly in Event Viewer before confirming it was reaching Wazuh.
+    </p>
+    <figure class="case-figure">
+      <img src="../assets/img/homesocfoundation/18-sysmon-event-viewer-verification.jpg" alt="Sysmon Process Creation events visible in Windows Event Viewer">
+      <figcaption>Sysmon verified in Event Viewer: Process Creation (Event ID 1) and network events streaming into the Microsoft-Windows-Sysmon/Operational log.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/homesocfoundation/19-sysmon-w004-deployed.jpg" alt="Sysmon installed, configured, and verified running on HOM-SVR-W004">
+      <figcaption>Sysmon installed, configured, and confirmed running on HOM-SVR-W004.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/homesocfoundation/20-sysmon-wazuh-alert-confirmed.jpg" alt="Sysmon alerting from both Windows machines confirmed on the Wazuh Manager">
+      <figcaption>Sysmon alerting from both Windows machines to the Wazuh Manager, confirmed end to end.</figcaption>
+    </figure>
+  </section>
+
+  <section class="case-section">
+    <h2>Wazuh agent onboarding</h2>
+    <p>
+      With every sensor in place, Wazuh Agent enrollment was confirmed across the three monitored
+      endpoints reporting into the manager on HOM-PC-L003.
+    </p>
+    <figure class="case-figure">
+      <img src="../assets/img/homesocfoundation/21-wazuh-agents-onboarded.jpg" alt="Wazuh agents successfully onboarded on the monitored endpoints">
+      <figcaption>Wazuh Agent successfully onboarded across the monitored endpoints.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/homesocfoundation/22-wazuh-agents-active-status.jpg" alt="Wazuh agents showing active status on the manager">
+      <figcaption>All onboarded agents confirmed active on the Wazuh Manager.</figcaption>
+    </figure>
+  </section>
+
+  <section class="case-section" style="border-bottom:none;">
+    <h2>Zeek network traffic analysis</h2>
+    <p>
+      Zeek was added to the two Linux hosts for protocol-level visibility and scan detection
+      alongside Suricata's signature matching. The first scan-detection test didn't go cleanly,
+      which is worth showing rather than hiding.
+    </p>
+    <figure class="case-figure">
+      <img src="../assets/img/homesocfoundation/23-zeek-l003-live-capture-confirmed.jpg" alt="Zeek live traffic capture confirmed through conn.log entries on HOM-PC-L003">
+      <figcaption>Zeek live capture confirmed on HOM-PC-L003 through entries appearing in conn.log.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/homesocfoundation/24-zeek-l002-deployed-capturing.jpg" alt="Zeek deployed and capturing live network traffic on HOM-PC-L002">
+      <figcaption>Zeek deployed and verified capturing live traffic on HOM-PC-L002.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/homesocfoundation/25-zeek-l002-initial-packet-loss-notice.jpg" alt="Zeek CaptureLoss notice fired instead of a scan detection on the first simulated nmap scan">
+      <figcaption>The first simulated nmap scan didn't trigger a scan-detection notice, instead surfacing Zeek's own CaptureLoss::Too_Much_Loss notice at over 28% packet loss, a genuine troubleshooting step rather than an immediate clean result.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/homesocfoundation/26-zeek-scan-detection-confirmed.jpg" alt="Wazuh dashboard confirming a genuine Zeek Scan::Port_Scan detection">
+      <figcaption>The confirmed detection: rule.id 100101, data.note Scan::Port_Scan, 192.168.100.97 scanned at least 20 unique ports, visible in the Wazuh dashboard.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/homesocfoundation/27-zeek-l003-full-validation.jpg" alt="Full Zeek scan-detection stack validated on HOM-PC-L003 with JSON logging and increased capture buffer">
+      <figcaption>Full Zeek scan-detection stack validated on HOM-PC-L003, JSON logging and an increased capture buffer applied upfront based on the lessons learned from HOM-PC-L002.</figcaption>
+    </figure>
+    <p style="margin-top: 24px;">
+      With the full stack verified, independently, with real evidence rather than a service
+      status check, this environment became the foundation the other eight labs in the pack build
+      on. Two stack-wide config fixes came out of this process too: disabling Suricata's eve-log
+      stats block (it was flooding Wazuh's JSON decoder) and enabling full archive logging so
+      every event, not only alerts, reaches the indexer.
+    </p>
+    <p>
+      The full project report, including every installation step and additional screenshots, is
+      documented on Notion.
+    </p>
+    <p>
+      <a href="https://app.notion.com/p/Four-Endpoint-Home-SOC-Setup-3e347b624f4780e1a9f8dcff64296bb6" target="_blank" rel="noopener">View full report on Notion &rarr;</a>
+    </p>
+  </section>
+
+</div>
+
+<footer class="site">
+  <div class="wrap">
+    Built and maintained by Prince Ugochukwu.
+  </div>
+</footer>
+
+</body>
+</html>
