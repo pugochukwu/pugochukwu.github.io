@@ -66,6 +66,18 @@
     <h3 class="group-heading">Home SOC lab pack</h3>
 
     <div class="project">
+      <h3><a href="projects/winbruteforcedetection.html">Windows Brute Force Detection</a></h3>
+      <p class="tools">Wazuh custom correlation rule &middot; Hydra &middot; MITRE ATT&amp;CK &middot; Sigma / Elastic</p>
+      <p>
+        Built and validated a custom Wazuh rule detecting RDP brute-force attacks end to end
+        against a live Hydra attack and a simulated credential-reuse pivot. Root-caused a real
+        detection bug where a built-in rule was silently pre-empting the custom one, fixed it,
+        and re-validated against the same live attack. Also authored the same logic as a Sigma
+        rule and documented its Elastic equivalent.
+      </p>
+    </div>
+
+    <div class="project">
       <h3><a href="projects/homesocfoundation.html">Four-Endpoint Home SOC Setup</a></h3>
       <p class="tools">Wazuh &middot; Sysmon &middot; Suricata &middot; Zeek &middot; Action1 &middot; Tailscale</p>
       <p>

@@ -1,0 +1,382 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Windows Brute Force Detection | Prince Ugochukwu</title>
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+
+<header class="site">
+  <div class="wrap">
+    <nav>
+      <a class="name" href="../index.html">Prince Ugochukwu</a>
+      <div class="links">
+        <a href="../index.html">Home</a>
+        <a href="../about.html">About</a>
+        <a href="../certifications.html">Certifications</a>
+        <a href="../tools.html">Tools</a>
+        <a class="current" href="../projects.html">Projects</a>
+      </div>
+    </nav>
+  </div>
+</header>
+
+<div class="wrap-wide">
+  <p class="breadcrumb"><a href="../projects.html">&larr; Back to Projects</a></p>
+
+  <section class="case-header">
+    <h1>Windows Brute Force Detection</h1>
+    <p class="case-org">Home SOC Lab Pack &middot; Lab 1, built on the Home SOC foundation</p>
+    <p class="case-meta">Solo build &middot; Wazuh correlation rule &middot; Hydra RDP brute force simulation &middot; MITRE ATT&amp;CK</p>
+  </section>
+
+  <section class="case-section">
+    <h2>The scenario</h2>
+    <p>
+      Meridian Logistics Group represents a common and dangerous gap in mid-size organisations:
+      infrastructure provisioned for a specific business need, RDP access for a contractor, that
+      outlives its purpose and its oversight. The jump host had no visibility into authentication
+      activity at all, so a sustained brute-force campaign of roughly 4,000 attempts could run
+      undetected. The brief called for detection within 15 minutes of brute-force success, with
+      supporting evidence, not just an alert that fires, but a documented chain from raw log to
+      dashboard to incident summary.
+    </p>
+    <p>
+      The approach: enable the right log sources, write detection logic that recognises the
+      specific pattern of high-frequency failed logons followed by a success from the same
+      source, author that same logic as a vendor-neutral Sigma rule and its Elastic equivalent,
+      then validate the entire pipeline against a real simulated attack and a credential-reuse
+      pivot toward the domain controller.
+    </p>
+  </section>
+
+  <section class="case-section">
+    <h2>Network architecture</h2>
+    <p>
+      Built directly on the four-endpoint Home SOC foundation: HOM-PC-L002 as the attack source,
+      HOM-PC-W001 as the exposed RDP jump host, HOM-SVR-W004 as the pivot target, and
+      HOM-PC-L003 running the Wazuh Manager that correlates and alerts on the whole chain.
+    </p>
+    <figure class="case-figure">
+      <img src="../assets/img/winbruteforcedetection/00-network-architecture.png" alt="Network architecture diagram showing the attack source, Windows endpoints, and Wazuh manager used in the brute force detection lab">
+      <figcaption>Lab topology: attack source, jump host, pivot target, and the Wazuh manager correlating detection across all three.</figcaption>
+    </figure>
+  </section>
+
+  <section class="case-section">
+    <h2>Technology stack</h2>
+    <ul class="role-list">
+      <li><strong>Wazuh</strong>: the live detection and alerting engine, already the SIEM backbone across the home SOC, so the operational rule stays consistent with the rest of the lab pack</li>
+      <li><strong>Sysmon</strong>: process-level context around each authentication event, showing what happened immediately after a successful logon, not just that one occurred</li>
+      <li><strong>Sigma</strong>: authored to build vendor-neutral detection skills, the same logic written once and portable to other platforms</li>
+      <li><strong>Elastic</strong>: represented as a documented detection target rather than a deployed stack, demonstrating fluency with KQL/EQL without a second live SIEM to maintain</li>
+    </ul>
+  </section>
+
+  <section class="case-section">
+    <h2>Confirmatory tests: telemetry before the attack</h2>
+    <p>
+      Before simulating anything, both Windows endpoints were confirmed sending logon telemetry
+      end to end. On HOM-PC-W001, a deliberately incorrect runas credential was submitted against
+      the local Administrator account, followed by a correct one. The failed logon was flagged by
+      rule 60122 at level 5; a successful authentication followed 5.2 seconds later, triggering a
+      tight, correctly ordered cluster, privilege assignment (67028), account changed (60110).
+    </p>
+    <figure class="case-figure">
+      <img src="../assets/img/winbruteforcedetection/01-w001-failed-logon-trigger.png" alt="Triggering a failed logon in PowerShell as Administrator on HOM-PC-W001">
+      <figcaption>Triggering a failed logon in PowerShell as Administrator to verify the agent's response (HOM-PC-W001).</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/winbruteforcedetection/02-w001-failed-logon-confirmed.png" alt="Failed logon confirmed on HOM-PC-W001">
+      <figcaption>Account failed logon confirmed.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/winbruteforcedetection/03-w001-successful-logon-trigger.png" alt="Triggering a successful logon in PowerShell as Administrator on HOM-PC-W001">
+      <figcaption>Triggering a successful logon to verify the agent's response, using the correct login password.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/winbruteforcedetection/04-w001-wazuh-failure-alert.png" alt="Wazuh dashboard showing the logon failure alert for HOM-PC-W001">
+      <figcaption>Logon failure alert (rule 60122) on the Wazuh dashboard.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/winbruteforcedetection/05-w001-wazuh-success-cluster.png" alt="Wazuh dashboard showing the successful logon event cluster for HOM-PC-W001">
+      <figcaption>The correctly ordered success cluster following the failed logon: special privileges assigned (67028), account changed (60110).</figcaption>
+    </figure>
+    <p>
+      The same confirmatory test was repeated on HOM-SVR-W004, with a successful authentication
+      following 43 seconds later, correctly classified by rule 60118 with the same expected
+      supporting events.
+    </p>
+    <figure class="case-figure">
+      <img src="../assets/img/winbruteforcedetection/06-w004-failed-logon-trigger.png" alt="Triggering a failed logon in PowerShell as Administrator on HOM-SVR-W004">
+      <figcaption>Triggering a failed logon to verify the agent's response (HOM-SVR-W004).</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/winbruteforcedetection/07-w004-successful-logon-trigger.png" alt="Triggering a successful logon in PowerShell as Administrator on HOM-SVR-W004">
+      <figcaption>Triggering a successful logon to verify the agent's response.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/winbruteforcedetection/08-w004-login-failed-confirmation.png" alt="Account login failed confirmation on HOM-SVR-W004">
+      <figcaption>Account login failed confirmation.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/winbruteforcedetection/09-w004-login-success-confirmation.png" alt="Account login successful confirmation on HOM-SVR-W004">
+      <figcaption>Account login successful confirmation.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/winbruteforcedetection/10-w004-wazuh-alerts-summary.png" alt="Wazuh dashboard login failure and success alerts summary for HOM-SVR-W004">
+      <figcaption>Login failure/success alerts summary on the Wazuh dashboard for HOM-SVR-W004.</figcaption>
+    </figure>
+  </section>
+
+  <section class="case-section">
+    <h2>Custom detection rule deployment</h2>
+    <p>
+      <code>local_rules.xml</code> was edited to add the <code>lab1_bruteforce</code> group:
+      rule 100210 (the failure-threshold base) and rule 100211 (the brute-force success
+      correlation, 8+ failed logons followed by a success from the same source). Structure was
+      verified with <code>cat -A</code> before validation. A <code>wazuh-logtest</code> attempt
+      against rule 100211 returned the generic rule 1002 (unmatched) rather than 100211, a known
+      limitation, manually pasted logs lack the eventchannel location metadata the rule depends
+      on, so this was treated as expected rather than a real failure and validation moved to a
+      live restart instead.
+    </p>
+    <figure class="case-figure">
+      <img src="../assets/img/winbruteforcedetection/11-local-rules-xml-edited.png" alt="local_rules.xml edited to add the lab1_bruteforce rule group">
+      <figcaption>local_rules.xml edited to add the lab1_bruteforce group (rules 100210, 100211), structure verified via cat -A.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/winbruteforcedetection/12-wazuh-logtest-initial-unmatched.png" alt="wazuh-logtest returning the generic unmatched rule 1002 instead of 100211">
+      <figcaption>wazuh-logtest correlation test returning rule 1002 (unmatched) due to missing eventchannel metadata in a manually pasted log, an expected limitation of this test method.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/winbruteforcedetection/13-wazuh-manager-restart-success.png" alt="Wazuh manager service restarted cleanly with the new rule group loaded">
+      <figcaption>wazuh-manager restarted cleanly, status active (running), to load the new lab1_bruteforce rule group.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/winbruteforcedetection/14-rule-100211-confirmed-dashboard.png" alt="Rule 100211 confirmed present and correctly configured in the Wazuh dashboard Rules management view">
+      <figcaption>Rule 100211 confirmed live in the Wazuh dashboard's Rules management view, level 12, correctly described and grouped.</figcaption>
+    </figure>
+  </section>
+
+  <section class="case-section">
+    <h2>Attack preparation</h2>
+    <p>
+      Hydra was installed on the attack source, HOM-PC-L002. The jump host's built-in
+      Administrator account, disabled by default on Windows 11, was enabled with a known
+      credential, and RDP was confirmed running with the correct inbound firewall rule after an
+      initial check found the service stopped.
+    </p>
+    <figure class="case-figure">
+      <img src="../assets/img/winbruteforcedetection/15-hydra-version-confirmed.png" alt="Hydra version confirmed on HOM-PC-L002">
+      <figcaption>Hydra installed on HOM-PC-L002, version confirmed via hydra -h.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/winbruteforcedetection/16-hydra-install-complete.png" alt="Hydra installation completed on the attack source">
+      <figcaption>Hydra installation confirmed complete on the attack source.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/winbruteforcedetection/17-w001-port-3389-local-check.png" alt="Local RDP port 3389 reachability confirmed via PowerShell Test-NetConnection on HOM-PC-W001">
+      <figcaption>Local port 3389 reachability on HOM-PC-W001 confirmed via PowerShell Test-NetConnection.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/winbruteforcedetection/18-w001-port-3389-nmap-confirmed.png" alt="nmap confirming RDP port 3389 open on HOM-PC-W001 from the attack source">
+      <figcaption>Network-level RDP reachability from HOM-PC-L002 to HOM-PC-W001 confirmed via nmap: port 3389/tcp open, ms-wbt-server.</figcaption>
+    </figure>
+    <p>
+      A custom password wordlist was built for the Hydra simulation, deliberately incorrect
+      entries followed by the known correct Administrator credential, then trimmed to 8 invalid
+      entries plus 1 valid entry to stay within the jump host's lockout threshold of 10 while
+      still meeting rule 100211's frequency requirement of 8.
+    </p>
+    <figure class="case-figure">
+      <img src="../assets/img/winbruteforcedetection/19-hydra-wordlist-prepared.png" alt="Hydra password list created and verified on HOM-PC-L002">
+      <figcaption>Hydra password list prepared on HOM-PC-L002: 8 invalid passwords followed by the valid Administrator credential.</figcaption>
+    </figure>
+  </section>
+
+  <section class="case-section">
+    <h2>Brute-force attack execution</h2>
+    <p>
+      From HOM-PC-L002, Hydra ran the prepared password list against HOM-PC-W001's RDP service,
+      and the resulting activity was mapped against the MITRE ATT&amp;CK framework alongside the
+      live Wazuh alerts.
+    </p>
+    <figure class="case-figure">
+      <img src="../assets/img/winbruteforcedetection/20-hydra-attack-execution.png" alt="Hydra executing the RDP brute force attack from HOM-PC-L002 against HOM-PC-W001">
+      <figcaption>Hydra executing the RDP brute-force simulation from HOM-PC-L002 against HOM-PC-W001.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/winbruteforcedetection/21-wazuh-alerts-during-attack.png" alt="Wazuh alerts generated during the simulated brute force attack">
+      <figcaption>Wazuh alerts generated during the attack, repeated authentication failures against the target.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/winbruteforcedetection/22-wazuh-alerts-cluster-view.png" alt="Wazuh alert cluster view during the brute force attack">
+      <figcaption>The alert cluster building as the attack progresses.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/winbruteforcedetection/23-mitre-attack-mapping-overview.png" alt="Simulated brute force activity mapped to the MITRE ATT&CK framework, overview">
+      <figcaption>The simulated brute-force activity mapped to its MITRE ATT&amp;CK technique.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/winbruteforcedetection/24-mitre-attack-mapping-detail.png" alt="MITRE ATT&CK mapping detail for the brute force technique observed">
+      <figcaption>MITRE ATT&amp;CK mapping detail, attack behaviour and detection context.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/winbruteforcedetection/25-wazuh-alerts-summary-prefix.png" alt="Wazuh dashboard alerts summary for the initial brute force simulation">
+      <figcaption>Wazuh alerts summary for the attack: repeated failed logons followed by a successful authentication.</figcaption>
+    </figure>
+  </section>
+
+  <section class="case-section">
+    <h2>Root cause: a rule priority collision, found and fixed</h2>
+    <p>
+      Rule 100211 didn't fire on this first live attack. The root cause: Wazuh credited the
+      built-in rule 92657 (level 6, a generic pass-the-hash/RDP detection) as the primary
+      classification for the successful logon event, so the custom rule, conditioned on
+      <code>&lt;if_sid&gt;100210&lt;/if_sid&gt;</code>, never saw a matching parent to correlate
+      against. The fix: change the trigger condition from a specific rule SID to a broader group
+      context, <code>&lt;if_group&gt;authentication_success&lt;/if_group&gt;</code>, so the
+      correlation fires regardless of which specific built-in rule classifies the successful
+      logon first.
+    </p>
+    <figure class="case-figure">
+      <img src="../assets/img/winbruteforcedetection/26-rule-100211-before-fix.png" alt="Rule 100211 configuration before the fix, triggered on a specific SID">
+      <figcaption>Rule 100211 before editing: triggered on a specific SID (100210), which the built-in rule 92657 was pre-empting.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/winbruteforcedetection/27-rule-100211-after-fix.png" alt="Rule 100211 configuration after the fix, triggered on the authentication_success group">
+      <figcaption>Rule 100211 after editing: triggered on the authentication_success group context instead of a single SID.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/winbruteforcedetection/28-wazuh-logtest-postfix-validation.png" alt="wazuh-logtest XML validation confirming local_rules.xml parses cleanly after the fix">
+      <figcaption>wazuh-logtest re-run post-fix: no XML parse errors, ruleset loads cleanly through to the end of the file.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/winbruteforcedetection/29-wazuh-manager-restart-postfix.png" alt="wazuh-manager restarted successfully with the corrected rule 100211 live">
+      <figcaption>wazuh-manager restarted with the corrected rule 100211 live, ready for re-testing.</figcaption>
+    </figure>
+  </section>
+
+  <section class="case-section">
+    <h2>Re-run: rule confirmed firing against a live attack</h2>
+    <p>
+      The Hydra attack was re-run from HOM-PC-L002 against HOM-PC-W001's RDP using the same
+      9-entry wordlist. Rule 100211 fired at level 12, correctly identifying the full pattern,
+      8+ failed logons via rule 60122, followed by a successful logon from the same source IP,
+      targeting Administrator@HOM-PC-W001, within milliseconds of the successful logon. The
+      priority collision with rule 92657 was confirmed resolved, validated end to end against a
+      genuine, live RDP brute-force attack rather than a synthetic test.
+    </p>
+    <figure class="case-figure">
+      <img src="../assets/img/winbruteforcedetection/30-hydra-attack-rerun-postfix.png" alt="Hydra brute force attack re-run from HOM-PC-L002 after the rule 100211 fix">
+      <figcaption>Hydra attack re-run from HOM-PC-L002 following the rule 100211 fix.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/winbruteforcedetection/31-rule-100211-confirmed-firing.png" alt="Wazuh dashboard confirming rule 100211 fired at level 12 against the live re-run attack">
+      <figcaption>Rule 100211 fired at level 12, correctly correlating the failure burst and the successful logon from the same source, confirmed on the Wazuh dashboard.</figcaption>
+    </figure>
+  </section>
+
+  <section class="case-section">
+    <h2>Simulated credential pivot: HOM-PC-W001 to HOM-SVR-W004</h2>
+    <p>
+      The brief's scenario has the attacker pivoting toward the domain controller using the same
+      credentials after the jump host is compromised, lateral movement through valid accounts.
+      A matching Administrator password was set on HOM-SVR-W004, RDP reachability confirmed, and
+      the pivot executed via <code>xfreerdp</code> from HOM-PC-L002 using the password already
+      compromised in the brute-force phase.
+    </p>
+    <figure class="case-figure">
+      <img src="../assets/img/winbruteforcedetection/32-w004-matching-password-set.png" alt="Matching Administrator password set on HOM-SVR-W004">
+      <figcaption>Matching Administrator password set on HOM-SVR-W004 to simulate credential reuse.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/winbruteforcedetection/33-w004-rdp-reachability-powershell.png" alt="RDP reachability to HOM-SVR-W004 confirmed via PowerShell">
+      <figcaption>RDP reachability to HOM-SVR-W004 confirmed via PowerShell.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/winbruteforcedetection/34-w004-port-3389-nmap-confirmed.png" alt="nmap confirming RDP port 3389 open on HOM-SVR-W004 from the attack source">
+      <figcaption>Network-level RDP reachability from HOM-PC-L002 to HOM-SVR-W004 confirmed via nmap: port 3389/tcp open, ms-wbt-server.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/winbruteforcedetection/35-w004-rdp-listener-netstat-confirmed.png" alt="RDP listener confirmed active on HOM-SVR-W004 via netstat">
+      <figcaption>RDP listener on HOM-SVR-W004 confirmed active via netstat, listening on all interfaces after a service restart cycle.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/winbruteforcedetection/36-pivot-xfreerdp-execution.png" alt="xfreerdp executed from HOM-PC-L002 to pivot into HOM-SVR-W004">
+      <figcaption>xfreerdp executed from HOM-PC-L002, authenticating to HOM-SVR-W004 as Administrator using the password compromised on HOM-PC-W001.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/winbruteforcedetection/37-pivot-simulation-executed.png" alt="Credential-reuse pivot simulation executed successfully from HOM-PC-L002 to HOM-SVR-W004">
+      <figcaption>Credential-reuse pivot simulation executed: a single successful authentication with no preceding failures, matching real lateral-movement behaviour.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/winbruteforcedetection/38-pivot-freerdp-session-captured.png" alt="FreeRDP session window showing an active Administrator session on HOM-SVR-W004">
+      <figcaption>The FreeRDP client window on HOM-PC-L002, an active Administrator PowerShell session on the HOM-SVR-W004 desktop, visual confirmation the pivot succeeded.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/winbruteforcedetection/39-pivot-detection-confirmed-dashboard.png" alt="Wazuh dashboard confirming detection of the credential reuse pivot via rules 92657 and 92653">
+      <figcaption>Pivot detected: rule 92657 (level 6) and rule 92653 (level 3) both fired independently on the credential-reuse RDP logon, distinct coverage from the custom brute-force rule used on the jump host.</figcaption>
+    </figure>
+  </section>
+
+  <section class="case-section">
+    <h2>Sigma rule and Elastic query documentation</h2>
+    <p>
+      The same detection logic proven working in Wazuh was authored as a vendor-neutral Sigma
+      rule and documented as its Elastic equivalent. One honest technical note: Sigma's
+      correlation types, <code>value_count</code> for the frequency threshold and
+      <code>temporal_ordered</code> for the failure-then-success sequence, couldn't express the
+      full logic as a single rule. Converting through sigma-cli with the Wazuh backend produced
+      two separate native rules, a counter and a sequence, which had to be manually merged. The
+      native Wazuh configuration, combining a frequency threshold, sequence tracking, and
+      same-source correlation in one rule, turned out more expressive than either standard could
+      cleanly represent on its own. Elastic Security enforces the same structural split: the
+      frequency threshold maps to a built-in Threshold rule type, and the ordered sequence to a
+      separate EQL sequence query, not raw KQL.
+    </p>
+  </section>
+
+  <section class="case-section">
+    <h2>Challenges and workarounds</h2>
+    <ul class="role-list">
+      <li>Sigma's correlation specification couldn't express the full detection logic as a single rule, an 8-attempt failure threshold combined with an ordered same-source success, splitting it into two correlation rules instead</li>
+      <li>Elastic Security's rule types enforced the same structural split, no single rule type combines a count-based threshold with an ordered event sequence</li>
+      <li>The core detection bug: rule 100211 silently failed to fire on the first live attack because a built-in rule (92657) pre-empted the classification it depended on, root-caused and fixed by switching the trigger from a specific SID to a broader group context</li>
+    </ul>
+  </section>
+
+  <section class="case-section" style="border-bottom:none;">
+    <h2>Incident summary</h2>
+    <p><strong>Scope:</strong> Meridian's jump host (HOM-PC-W001) had an exposed RDP service with no logon monitoring, a legacy of contractor remote access that outlived its purpose. This engagement built, tested, and validated detection for exactly that gap.</p>
+    <p><strong>Detection logic:</strong> a custom Wazuh correlation rule (ID 100211) detects eight or more failed RDP logons followed by a successful logon from the same source IP, within a 120-second window.</p>
+    <p><strong>Results:</strong> Phase 1, brute force (HOM-PC-L002 &rarr; HOM-PC-W001), Hydra ran a 9-entry credential list against RDP; rule 100211 fired at level 12 within milliseconds of the successful logon. Phase 2, lateral movement (HOM-PC-L002 &rarr; HOM-SVR-W004), using the credential compromised in Phase 1, a single clean RDP authentication simulated a valid-account pivot, detected independently by Wazuh's built-in anomalous-logon rules.</p>
+    <p><strong>False positives:</strong> two unrelated alerts on HOM-SVR-W004 during testing were investigated and confirmed as false positives rather than indicators of compromise, a "possible PrintNightmare" alert traced to the legitimate Terminal Services Easy Print driver auto-installed by FreeRDP's printer redirection, and a "PowerShell created executable in Windows root" alert traced to PowerShell's own internal script-policy validation artifacts.</p>
+    <p><strong>Recommended containment:</strong></p>
+    <ul class="role-list">
+      <li>Retain the existing account lockout policy (threshold 10, duration 10 minutes) and consider tightening to 5 attempts given the jump host's internet-facing exposure</li>
+      <li>Enforce MFA on all RDP-accessible accounts, particularly local administrators, who can't be protected by lockout policy alone against low-rate credential stuffing</li>
+      <li>Restrict RDP exposure to a VPN-gated or bastion-host access path rather than direct internet exposure, closing the root cause that allowed this scenario to exist</li>
+    </ul>
+    <p>
+      The full project report, including the Sigma and Elastic rule YAML, is documented on
+      Notion.
+    </p>
+    <p>
+      <a href="https://app.notion.com/p/Windows-Brute-Force-Detection-3eb47b624f4780d4879ac7a51033fcfd" target="_blank" rel="noopener">View full report on Notion &rarr;</a>
+    </p>
+  </section>
+
+</div>
+
+<footer class="site">
+  <div class="wrap">
+    Built and maintained by Prince Ugochukwu.
+  </div>
+</footer>
+
+</body>
+</html>
