@@ -1,0 +1,516 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Phishing Email Investigation | Prince Ugochukwu</title>
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+
+<header class="site">
+  <div class="wrap">
+    <nav>
+      <a class="name" href="../index.html">Prince Ugochukwu</a>
+      <div class="links">
+        <a href="../index.html">Home</a>
+        <a href="../about.html">About</a>
+        <a href="../certifications.html">Certifications</a>
+        <a href="../tools.html">Tools</a>
+        <a class="current" href="../projects.html">Projects</a>
+      </div>
+    </nav>
+  </div>
+</header>
+
+<div class="wrap-wide">
+  <p class="breadcrumb"><a href="../projects.html">&larr; Back to Projects</a></p>
+
+  <section class="case-header">
+    <h1>Phishing Email Investigation</h1>
+    <p class="case-org">Home SOC Lab Pack &middot; Lab 2, built on the Home SOC foundation</p>
+    <p class="case-meta">Solo build &middot; TheHive &middot; Cortex &middot; CyberChef &middot; VirusTotal &middot; Wazuh-Slack alerting</p>
+  </section>
+
+  <section class="case-section">
+    <h2>The scenario</h2>
+    <p>
+      Solara Health Partners is a regional outpatient clinic network that handles patient
+      scheduling and billing data under HIPAA. A billing employee receives an email that appears
+      to come from the organisation's EHR vendor, asking them to "verify" a login through an
+      attached HTML file. The employee does not open the attachment and forwards the message to
+      IT, which is the correct behaviour. Even so, Solara's regulatory posture requires a
+      formal, documented investigation of any suspected compromise of systems adjacent to
+      patient data, whether or not the attachment was executed.
+    </p>
+    <p>
+      The work follows what an on-call SOC analyst does with a forwarded report: analyse the
+      email headers, decode the attachment safely, check reputation, open a tracked case,
+      enrich every observable, scope who else received the message, and close with a verdict
+      and remediation. The email, the attachment, and the mailbox search used here were
+      constructed for the lab, so the scenario is simulated end to end. The tooling, the
+      troubleshooting, and the investigation process are real.
+    </p>
+  </section>
+
+  <section class="case-section">
+    <h2>Network architecture</h2>
+    <p>
+      The lab reuses the Home SOC foundation. HOM-PC-L002 becomes the investigation platform
+      running a new Docker Compose stack, HOM-PC-L003 keeps running the Wazuh Manager, and
+      HOM-PC-W001 is powered off so its CPU and memory can be lent to HOM-PC-L002 for the
+      duration of the lab. Cortex reaches the VirusTotal reputation API over outbound HTTPS.
+    </p>
+    <figure class="case-figure">
+      <img src="../assets/img/phishingemail/00-network-architecture.png" alt="Network architecture diagram for the phishing investigation lab showing the investigation platform, Wazuh manager, and VirusTotal">
+      <figcaption>Lab topology: HOM-PC-L002 as the investigation platform running TheHive, Cortex, CyberChef, Elasticsearch and Cassandra, with Wazuh on HOM-PC-L003 and the VirusTotal API as the external intelligence source.</figcaption>
+    </figure>
+  </section>
+
+  <section class="case-section">
+    <h2>Technology stack</h2>
+    <ul class="role-list">
+      <li><strong>TheHive</strong>: case management. It holds the observables, tags, tasks, notes, and timeline so the investigation has structure and a reviewable record</li>
+      <li><strong>Cortex</strong>: the analysis engine connected to TheHive. It runs analyzers against case observables and returns the results inside the case, so enrichment is consistent and recorded</li>
+      <li><strong>VirusTotal</strong>: reputation intelligence for domains, URLs, IP addresses, and file hashes, used manually and through Cortex with an API key</li>
+      <li><strong>CyberChef</strong>: the decoding workbench for attachment triage, used to peel back Base64 and JavaScript encoding without opening the file in a browser</li>
+      <li><strong>Wazuh and Slack</strong>: a level 12 alert integration so high-severity telemetry from all four agents reaches an analyst channel in real time</li>
+    </ul>
+  </section>
+
+  <section class="case-section">
+    <h2>Resource reallocation</h2>
+    <p>
+      TheHive, Cortex, Elasticsearch, and Cassandra cannot run reliably on the baseline VM
+      allocation. HOM-PC-W001 was shut down cleanly with its configuration left intact, and
+      HOM-PC-L002 was upgraded to 8GB RAM, 4 vCPU, and a 60GB disk. The allocations are to be
+      reverted once the lab is complete. Zeek on HOM-PC-L002 was stopped, not uninstalled, to
+      free more CPU and memory.
+    </p>
+    <figure class="case-figure">
+      <img src="../assets/img/phishingemail/01-l002-vm-hardware-upgrade.png" alt="VMware hardware settings for HOM-PC-L002 showing 8GB RAM, 4 processors, and 60GB disk">
+      <figcaption>Updated hardware for HOM-PC-L002: 8GB RAM, 4 vCPU, and a 60GB disk, captured as deployment evidence.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/phishingemail/02-zeek-stopped-on-l002.png" alt="zeekctl status showing Zeek stopped on HOM-PC-L002">
+      <figcaption>zeekctl status confirming Zeek is stopped on HOM-PC-L002 with its configuration left intact so it can be restored after the lab.</figcaption>
+    </figure>
+  </section>
+
+  <section class="case-section">
+    <h2>Wazuh-Slack alerting</h2>
+    <p>
+      A Slack integration was added to <code>ossec.conf</code> on the Wazuh Manager with a level
+      12 threshold, applying to all four agents. It was verified in three steps: the
+      integration daemon confirmed the integration enabled after a manager restart, a direct
+      test message was posted from the manager terminal, and a custom level 12 alert payload
+      was passed through the integration script to prove the formatted alert path.
+    </p>
+    <figure class="case-figure">
+      <img src="../assets/img/phishingemail/03-integratord-slack-enabled.png" alt="wazuh-integratord log line confirming the Slack integration is enabled">
+      <figcaption>The Wazuh integration daemon logging that the Slack integration is enabled after the manager restart.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/phishingemail/04-slack-test-message-received.png" alt="Slack channel showing the test message from the Wazuh manager terminal">
+      <figcaption>The test message sent from the manager terminal arriving in Slack through the Home SOC Alerts app, confirming outbound routing.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/phishingemail/05-slack-level12-alert-received.png" alt="Slack channel showing a formatted level 12 Wazuh alert">
+      <figcaption>A formatted level 12 Wazuh alert delivered to Slack, confirming the integration parses and publishes alert payloads correctly.</figcaption>
+    </figure>
+  </section>
+
+  <section class="case-section">
+    <h2>Building the investigation platform</h2>
+    <p>
+      Docker Engine and the Compose plugin were installed from the official repository, and the
+      StrangeBee Docker repository was cloned with the testing profile selected, because it
+      provisions TheHive and Cortex together on one server and fits the 8GB, 4 vCPU host. The
+      profile pins Cassandra 4.1.12, Elasticsearch 8.19.22, TheHive 5.8.0, Cortex 4.1.0, and
+      Nginx 1.31.6. The first startup did not go cleanly, which is covered below because it is
+      part of the work.
+    </p>
+    <figure class="case-figure">
+      <img src="../assets/img/phishingemail/06-docker-compose-verified.png" alt="Docker and Compose versions verified with the hello-world container">
+      <figcaption>Docker 29.8.2 and Compose 5.6.0 verified, with the hello-world container confirming the install works.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/phishingemail/07-strangebee-repo-cloned.png" alt="StrangeBee docker repository cloned into /opt/lab2">
+      <figcaption>The StrangeBee Docker repository cloned into /opt/lab2, with the testing profile chosen for the deployment.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/phishingemail/08-testing-profile-initialised.png" alt="init.sh output and directory listings for the testing profile">
+      <figcaption>The testing profile initialised with init.sh, generating the environment file and TheHive configuration, with secrets excluded from the capture.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/phishingemail/09-first-compose-dependency-failure.png" alt="Compose status showing Elasticsearch unhealthy and other containers left in Created state">
+      <figcaption>First startup: Elasticsearch took about 76 seconds to bootstrap, longer than Compose waited, leaving TheHive, Cortex, and Nginx in the Created state. No out-of-memory kill was recorded, and no configuration change was needed.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/phishingemail/10-all-containers-healthy.png" alt="docker compose ps showing all five containers running with healthy status">
+      <figcaption>All five containers running, with Cassandra, Elasticsearch, TheHive, and Cortex reporting healthy, plus per-container memory use against the 2GiB limit.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/phishingemail/11-java-heap-override-applied.png" alt="docker-compose.override.yml reducing the Java heap sizes and the resulting memory figures">
+      <figcaption>Java heap sizes reduced through a docker-compose.override.yml, leaving the official compose file untouched, after the host dropped to about 1GiB of free memory and began using swap.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/phishingemail/12-nginx-502-fixed.png" alt="Nginx restart and HTTP 200 responses from TheHive and Cortex status endpoints">
+      <figcaption>Nginx returned HTTP 502 after the application containers were recreated, consistent with stale backend addresses. A restart brought both endpoints back to HTTP 200.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/phishingemail/13-cortex-bootstrap-output.png" alt="Cortex bootstrap script output creating the organisation, users, and analyzers">
+      <figcaption>The Cortex bootstrap script creating the index, superadmin, organisation, integration user, and analyzers. It was interrupted before its final steps, so the temporary basic-auth setting was removed manually and the TheHive initialisation script was then run to completion.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/phishingemail/14-thehive-users-dashboard.png" alt="TheHive organisation users page after bootstrap">
+      <figcaption>TheHive organisation users after bootstrap. The default credentials on all four bootstrap accounts were replaced with unique passwords held in a password manager.</figcaption>
+    </figure>
+  </section>
+
+  <section class="case-section">
+    <h2>Cortex analyzers and the permissions bug</h2>
+    <p>
+      VirusTotal GetReport, URLhaus, and DomainMailSPFDMARC were enabled in Cortex, each with a
+      TLP:AMBER and PAP:AMBER sharing policy. The integration was tested from TheHive against
+      the EICAR hash and 8.8.8.8. The first four analyzer jobs failed with only a job folder
+      path as the error. Cortex runs as UID 1001, while the host folders it writes to were owned
+      by root and by the lab user, so it could not write job output. Ownership of both folders
+      was changed to 1001:1001, Cortex was restarted, and the same jobs then succeeded.
+    </p>
+    <figure class="case-figure">
+      <img src="../assets/img/phishingemail/15-analyzer-run-dialog.png" alt="TheHive analyzer selection dialog listing the available Cortex analyzers">
+      <figcaption>Selecting Cortex analyzers to run against a case observable from inside TheHive.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/phishingemail/16-analyzer-jobs-failed.png" alt="Cortex jobs history showing failed analyzer jobs">
+      <figcaption>The first analyzer jobs failing with a job folder path as the only error message, the starting point of the diagnosis.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/phishingemail/17-cortex-permissions-fix-restart.png" alt="Terminal showing chown to UID 1001 on the Cortex folders and the Cortex restart">
+      <figcaption>The fix: job and log folders handed to UID 1001, the Cortex service user, followed by a Cortex restart.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/phishingemail/18-analyzer-jobs-successful.png" alt="Cortex jobs history showing four analyzer jobs completed successfully">
+      <figcaption>VirusTotal GetReport, CIRCLHashlookup, and GoogleDNS jobs all completing with a Success status after the permissions fix.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/phishingemail/19-virustotal-eicar-report.png" alt="VirusTotal analysis report returned inside TheHive for the EICAR hash">
+      <figcaption>The VirusTotal report for the EICAR test hash returned inside the case, confirming the full TheHive to Cortex to VirusTotal chain works.</figcaption>
+    </figure>
+  </section>
+
+  <section class="case-section">
+    <h2>Network connectivity and tuning</h2>
+    <p>
+      New TCP connections from the analyst workstation to HOM-PC-L002 began timing out while
+      ping kept working. Diagnostics on the host showed TheHive, Cortex, and Nginx healthy, the
+      right IP bound, and no firewall or connection-tracking limit in play. A packet capture
+      showed HOM-PC-L002 answering every attempt, which placed the fault on the return path to
+      the workstation. The workstation's Wi-Fi profile was corrected to Private and a stale ARP
+      entry was cleared, after which connectivity returned. Nothing on HOM-PC-L002 itself was
+      changed. Separately, Cassandra's health check interval was relaxed to cut a constant CPU
+      load.
+    </p>
+    <figure class="case-figure">
+      <img src="../assets/img/phishingemail/20-thehive-login-restored.png" alt="TheHive login page reachable again from the analyst workstation">
+      <figcaption>TheHive reachable again from the analyst workstation after the return-path fix.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/phishingemail/21-cortex-login-restored.png" alt="Cortex login page reachable again from the analyst workstation">
+      <figcaption>Cortex reachable again from the analyst workstation.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/phishingemail/22-cassandra-healthcheck-tuned.png" alt="Container status and resource usage after the Cassandra health check was relaxed">
+      <figcaption>Cassandra's health check interval changed from 2 seconds to 30 seconds. Its CPU use fell from a sustained 40 to 76 percent to about 5 percent, with no effect on the other containers.</figcaption>
+    </figure>
+  </section>
+
+  <section class="case-section">
+    <h2>CyberChef deployment</h2>
+    <p>
+      CyberChef was deployed as a standalone container, independent of the TheHive and Cortex
+      stack. It was first published with a port mapping that did not match the image's internal
+      Nginx port, so the service was unreachable even though the container reported healthy.
+      Recreating it with the corrected mapping fixed access.
+    </p>
+    <figure class="case-figure">
+      <img src="../assets/img/phishingemail/23-cyberchef-container-running.png" alt="CyberChef container running and its memory usage">
+      <figcaption>The CyberChef container running, using about 12MiB of memory.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/phishingemail/24-cyberchef-port-mapping-corrected.png" alt="CyberChef container recreated with the corrected port mapping">
+      <figcaption>The container recreated with the mapping corrected from 8080:80 to 8080:8000 to match the image's internal Nginx port.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/phishingemail/25-cyberchef-interface-loaded.png" alt="CyberChef web interface loaded in the analyst browser">
+      <figcaption>The CyberChef interface loaded in the analyst workstation browser on port 8080.</figcaption>
+    </figure>
+  </section>
+
+  <section class="case-section">
+    <h2>Building the simulated phishing sample</h2>
+    <p>
+      With the platform ready, the sample was built on HOM-PC-L002. The HTML attachment holds a
+      Base64-encoded JavaScript redirect to a fictional, non-resolvable domain. The email was
+      assembled with mpack so the attachment is a real MIME part, then spoofed headers were
+      inserted: a Return-Path, a two-hop Received chain, failing SPF, DKIM, and DMARC results,
+      and a From address impersonating a fictional vendor, MedLink Health. A mailbox search
+      result listing five Solara staff recipients was also fabricated for the scoping step.
+    </p>
+    <figure class="case-figure">
+      <img src="../assets/img/phishingemail/26-html-attachment-built.png" alt="Creating the HTML attachment containing an encoded JavaScript redirect">
+      <figcaption>The HTML attachment, MedLink_Login_Verification.html, built with an obfuscated redirect hidden behind Base64 and eval.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/phishingemail/27-eml-structure-drafted.png" alt="Drafting the MIME structure of the phishing email">
+      <figcaption>Drafting the email's MIME structure, including the multipart boundary and the attachment headers.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/phishingemail/28-simulated-mailbox-search-created.png" alt="Simulated mailbox search results file listing five recipients and their actions">
+      <figcaption>The simulated mailbox search results created for the scoping step, listing five recipients and what each did with the message.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/phishingemail/29-eml-build-confirmed.png" alt="Directory listing and head of the built email confirming the attachment was embedded">
+      <figcaption>Build confirmed: the .eml generated with mpack, with the real attachment embedded as a proper MIME part.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/phishingemail/30-spoofed-headers-inserted.png" alt="Python script inserting the spoofed headers into the email">
+      <figcaption>Inserting the spoofed headers into the message, including the failing authentication results.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/phishingemail/31-final-email-headers.png" alt="Finished headers of the final phishing sample email">
+      <figcaption>The finished headers of phishing_sample_final.eml, the artifact the rest of the investigation works from.</figcaption>
+    </figure>
+  </section>
+
+  <section class="case-section">
+    <h2>Email header analysis</h2>
+    <p>
+      The headers show several indicators of sender spoofing. The originating server identified
+      itself as mail.medlink-health-portal.com in the HELO, while the receiving server logged it
+      as unknown. The originating IP, 198.51.100.44, sits in the TEST-NET-2 documentation range
+      (RFC 5737), which is not used for live mail delivery. The Return-Path points to a domain
+      styled to resemble Solara's EHR vendor. The second Received hop shows normal internal
+      delivery once the message entered Solara's mail environment.
+    </p>
+    <figure class="case-figure">
+      <img src="../assets/img/phishingemail/32-raw-email-headers.png" alt="Raw header block of the phishing email">
+      <figcaption>The raw header block, including the Received chain, Authentication-Results, and the spoofed From address.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/phishingemail/33-header-breakdown-table.png" alt="Table explaining each email header field and what it indicates">
+      <figcaption>Header-by-header breakdown: what each field says and why it matters for the spoofing assessment.</figcaption>
+    </figure>
+    <table class="sla-table">
+      <tr><th>Check</th><th>Result</th><th>What it means</th></tr>
+      <tr><td>SPF</td><td>Fail</td><td>The sending IP is not authorised to send for the claimed domain</td></tr>
+      <tr><td>DKIM</td><td>Fail</td><td>No valid cryptographic signature was present</td></tr>
+      <tr><td>DMARC</td><td>Fail (p=none)</td><td>No alignment on SPF or DKIM, but the monitoring-only policy told receivers not to quarantine or reject, so the message got through</td></tr>
+    </table>
+  </section>
+
+  <section class="case-section">
+    <h2>Attachment triage in CyberChef</h2>
+    <p>
+      The attachment was examined without opening it in a browser. A Base64-encoded JavaScript
+      block wrapped in an <code>eval(atob(...))</code> construct was located in the file. The
+      From Base64 operation in CyberChef decoded it to a redirect to
+      <code>https://secure-medlink-verify.net/login?session=redirect</code>, a domain distinct
+      from the sender's domain. The SHA-256 of the attachment was then extracted from the
+      command line.
+    </p>
+    <figure class="case-figure">
+      <img src="../assets/img/phishingemail/34-base64-block-located.png" alt="grep output locating the Base64 block inside the HTML attachment">
+      <figcaption>The Base64 block inside the eval(atob(...)) wrapper located in the attachment.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/phishingemail/35-cyberchef-decoded-redirect.png" alt="CyberChef From Base64 operation revealing the redirect URL">
+      <figcaption>CyberChef decoding the block to reveal the redirect target, the second domain that becomes an observable in the case.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/phishingemail/36-attachment-sha256-extracted.png" alt="sha256sum output for the HTML attachment">
+      <figcaption>SHA-256 of the attachment extracted from the command line, used for the reputation check and as a case observable.</figcaption>
+    </figure>
+  </section>
+
+  <section class="case-section">
+    <h2>Reputation checks in VirusTotal</h2>
+    <p>
+      Both domains returned a detection score of 0 out of 93 alongside an Error() status and
+      unresolved fields, meaning the scanners could not reach them rather than confirming them
+      as safe. The attachment hash returned no existing report, meaning it had never been
+      submitted before. A clean score on a brand-new phishing domain is inconclusive, not
+      exculpatory, so the verdict does not rest on reputation alone.
+    </p>
+    <figure class="case-figure">
+      <img src="../assets/img/phishingemail/37-virustotal-sender-domain.png" alt="VirusTotal result for the spoofed sender domain showing a score of 0 of 93 with an error status">
+      <figcaption>VirusTotal for the sender domain: 0 of 93 with an Error() status, so the scanners could not reach it.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/phishingemail/38-virustotal-redirect-domain.png" alt="VirusTotal result for the redirect domain showing a score of 0 of 93 with an error status">
+      <figcaption>VirusTotal for the redirect domain: the same 0 of 93 with an Error() status.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/phishingemail/39-virustotal-hash-no-report.png" alt="VirusTotal showing no existing report for the attachment hash">
+      <figcaption>VirusTotal holding no report for the attachment hash, so the file had never been seen before.</figcaption>
+    </figure>
+  </section>
+
+  <section class="case-section">
+    <h2>TheHive case</h2>
+    <p>
+      A case was opened as High severity with TLP:AMBER and PAP:AMBER. A task checklist covers
+      header analysis, attachment triage, reputation checks, Cortex enrichment, scope
+      assessment, and the closing report. Five observables were added as indicators of
+      compromise: the spoofed sender domain, the redirect domain, the originating IP, the
+      attachment's SHA-256, and the spoofed sender address.
+    </p>
+    <figure class="case-figure">
+      <img src="../assets/img/phishingemail/40-thehive-case-creation.png" alt="TheHive create case dialog with severity, TLP, and PAP set">
+      <figcaption>Creating the case: High severity, TLP:AMBER, PAP:AMBER, with a description of the incident.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/phishingemail/41-thehive-case-overview.png" alt="TheHive case overview page">
+      <figcaption>The case overview, the single place that holds the evidence, tags, and timeline.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/phishingemail/42-thehive-tasks-checklist.png" alt="TheHive task checklist for the investigation">
+      <figcaption>The investigation task checklist, so each step is tracked and auditable.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/phishingemail/43-thehive-observables-added.png" alt="TheHive observables list showing the five indicators of compromise">
+      <figcaption>The five observables added as indicators of compromise.</figcaption>
+    </figure>
+  </section>
+
+  <section class="case-section">
+    <h2>Observable enrichment through Cortex</h2>
+    <p>
+      Analyzers were run individually against all five observables from inside TheHive, and
+      the results were registered against each artifact. Eleven jobs ran in total. Nine
+      completed, confirming no VirusTotal detections, no SPF or DMARC records for the sender
+      domain, no CIRCL or URLhaus matches, and a non-routable originating IP. Two failed. The
+      Abuse_Finder analyzer returned an NXDOMAIN error querying the sender domain's MX record,
+      which confirms the domain has no DNS presence. The Inoitsu analyzer failed on a regular
+      expression error inside the analyzer, a tooling issue unrelated to the observable.
+    </p>
+    <figure class="case-figure">
+      <img src="../assets/img/phishingemail/44-enrich-sender-domain.png" alt="Analyzer results for the spoofed sender domain medlink-health-portal.com">
+      <figcaption>Analyzer results for the spoofed sender domain, medlink-health-portal.com.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/phishingemail/45-enrich-redirect-domain.png" alt="Analyzer results for the redirect domain secure-medlink-verify.net">
+      <figcaption>Analyzer results for the credential-harvesting redirect domain, secure-medlink-verify.net.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/phishingemail/46-enrich-originating-ip.png" alt="Analyzer results for the originating IP address 198.51.100.44">
+      <figcaption>Analyzer results for the originating IP, 198.51.100.44, confirming a non-routable address.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/phishingemail/47-enrich-attachment-hash.png" alt="Analyzer results for the attachment SHA-256 hash">
+      <figcaption>Analyzer results for the attachment's SHA-256 hash.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/phishingemail/48-enrich-sender-email.png" alt="Analyzer results for the spoofed sender email address">
+      <figcaption>Analyzer results for the spoofed sender address, support@medlink-health-portal.com.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/phishingemail/49-cortex-jobs-history.png" alt="Cortex jobs history showing eleven analyzer jobs, nine successful and two failed">
+      <figcaption>The full Cortex jobs history: eleven jobs, nine successful and two failed.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/phishingemail/50-cortex-analyzer-error-details.png" alt="Error details for the Abuse_Finder and Inoitsu analyzer failures">
+      <figcaption>Error details for the two failures: Abuse_Finder's NXDOMAIN result (evidence the sender domain does not exist) and Inoitsu's internal regex error (a tooling fault).</figcaption>
+    </figure>
+  </section>
+
+  <section class="case-section">
+    <h2>Scope of exposure</h2>
+    <p>
+      A simulated mailbox search for the sender address and subject line found five recipients.
+      Only one opened the attachment.
+    </p>
+    <table class="sla-table">
+      <tr><th>Recipient</th><th>Role</th><th>Action</th></tr>
+      <tr><td>j.alvarez</td><td>Billing, Clinic A</td><td>Forwarded to IT without opening the attachment, which started the investigation</td></tr>
+      <tr><td>m.chen</td><td>Billing, Clinic A</td><td>Opened the email, did not open the attachment</td></tr>
+      <tr><td>r.osei</td><td>Scheduling, Clinic B</td><td>No action</td></tr>
+      <tr><td>t.murphy</td><td>Front Desk, Clinic A</td><td>No action (unread or deleted)</td></tr>
+      <tr><td>s.patel</td><td>Billing, Clinic B</td><td>Opened the attachment, so the primary concern for follow-up</td></tr>
+    </table>
+    <p>
+      The redirect domain does not resolve, so no credentials are assessed to have been
+      harvested. The exposure event for s.patel's account is still treated as a precaution-driven
+      risk, not a ruled-out one.
+    </p>
+    <figure class="case-figure">
+      <img src="../assets/img/phishingemail/51-mailbox-search-results.png" alt="Simulated mailbox search results listing the five recipients and their actions">
+      <figcaption>The mailbox search results that scope the exposure to five recipients and one confirmed attachment open.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/phishingemail/52-mailbox-results-observable-on-case.png" alt="TheHive case showing the mailbox search results attached as a tagged file observable">
+      <figcaption>The search results attached to the case as a tagged file observable, so the scoping evidence lives in the same record as everything else.</figcaption>
+    </figure>
+  </section>
+
+  <section class="case-section">
+    <h2>Challenges and fixes</h2>
+    <table class="sla-table">
+      <tr><th>Problem</th><th>Cause</th><th>Fix</th></tr>
+      <tr><td>Compose startup failed</td><td>Elasticsearch needed about 76s to bootstrap, longer than Compose waited</td><td>Waited for healthy status, then started the remaining containers, with no configuration change</td></tr>
+      <tr><td>Memory pressure and swap</td><td>Whole stack plus Wazuh agent and Suricata on 8GB</td><td>Lowered Java heap sizes through an override file</td></tr>
+      <tr><td>Nginx 502 errors</td><td>Stale backend addresses after container recreation</td><td>Restarted Nginx</td></tr>
+      <tr><td>Interrupted Cortex bootstrap</td><td>Script stopped before analyzer activation and cleanup</td><td>Removed the temporary auth setting manually and completed the TheHive initialisation</td></tr>
+      <tr><td>Analyzer jobs failed</td><td>Cortex runs as UID 1001 and could not write to the job and log folders</td><td>Changed folder ownership to 1001:1001 and restarted Cortex</td></tr>
+      <tr><td>Intermittent TCP timeouts</td><td>Fault on the return path to the analyst workstation, not on the host</td><td>Set the Wi-Fi profile to Private and cleared a stale ARP entry</td></tr>
+      <tr><td>High Cassandra CPU</td><td>Health check ran every 2 seconds</td><td>Relaxed the interval to 30 seconds</td></tr>
+      <tr><td>CyberChef unreachable</td><td>Port mapping 8080:80 against an internal port of 8000</td><td>Recreated the container with 8080:8000</td></tr>
+    </table>
+  </section>
+
+  <section class="case-section" style="border-bottom:none;">
+    <h2>Verdict and closing report</h2>
+    <p><strong>Verdict: malicious.</strong> The reported email is a credential-harvesting phishing attempt impersonating Solara's EHR vendor. Four independent lines of evidence support the verdict:</p>
+    <ul class="role-list">
+      <li>Header analysis found a hostname mismatch, an originating IP in a non-routable documentation range, and failures across SPF, DKIM, and DMARC</li>
+      <li>Attachment triage found a deliberately obfuscated JavaScript redirect, hidden behind Base64 and eval, pointing to a separate unaffiliated domain styled as a login page</li>
+      <li>Enrichment found no legitimate infrastructure behind either domain, and Abuse_Finder confirmed through DNS failure that the sender domain does not exist</li>
+      <li>No single check carried the verdict. The absence of VirusTotal detections for a brand-new domain was treated as inconclusive, so the conclusion rests on header and content analysis</li>
+    </ul>
+    <p><strong>Recommended remediation:</strong></p>
+    <ul class="role-list">
+      <li>Block the sender domain and address (medlink-health-portal.com and support@medlink-health-portal.com) on the email security gateway</li>
+      <li>Block the redirect domain (secure-medlink-verify.net) in DNS or web filtering, including for personal devices outside corporate email filtering</li>
+      <li>Force a password reset for s.patel as a precaution, whether or not credential submission can be confirmed</li>
+      <li>Issue an awareness notice to all staff describing this campaign: vendor impersonation, an urgency-based subject line, and an HTML attachment requesting login verification</li>
+      <li>No further action for the other recipients beyond the awareness notice</li>
+    </ul>
+    <p>
+      The case is recommended for closure as Resolved once the remediation is complete. The
+      documented investigation also meets Solara's requirement to formally review any suspected
+      compromise adjacent to patient scheduling and billing data, whether or not a compromise
+      occurred.
+    </p>
+    <figure class="case-figure">
+      <img src="../assets/img/phishingemail/53-thehive-tasks-completed.png" alt="TheHive task checklist with every investigation task completed">
+      <figcaption>Every task on the investigation checklist marked complete in TheHive, closing out the documented case.</figcaption>
+    </figure>
+    <p>
+      The full project report is documented on Notion.
+    </p>
+    <p>
+      <a href="https://app.notion.com/p/Phishing-Email-Investigation-3ef47b624f47801cb89ef39629dc3a77" target="_blank" rel="noopener">View full report on Notion &rarr;</a>
+    </p>
+  </section>
+
+</div>
+
+<footer class="site">
+  <div class="wrap">
+    Built and maintained by Prince Ugochukwu.
+  </div>
+</footer>
+
+</body>
+</html>
