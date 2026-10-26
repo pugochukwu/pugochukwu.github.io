@@ -1,0 +1,747 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Incident Response Case Workflow | Prince Ugochukwu</title>
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+
+<header class="site">
+  <div class="wrap">
+    <nav>
+      <a class="name" href="../index.html">Prince Ugochukwu</a>
+      <div class="links">
+        <a href="../index.html">Home</a>
+        <a href="../about.html">About</a>
+        <a href="../certifications.html">Certifications</a>
+        <a href="../tools.html">Tools</a>
+        <a class="current" href="../projects.html">Projects</a>
+      </div>
+    </nav>
+  </div>
+</header>
+
+<div class="wrap-wide">
+  <p class="breadcrumb"><a href="../projects.html">&larr; Back to Projects</a></p>
+
+  <section class="case-header">
+    <h1>Incident Response Case Workflow</h1>
+    <p class="case-org">Home SOC Lab Pack &middot; Lab 7, built on the Home SOC foundation</p>
+    <p class="case-meta">Solo build &middot; Wazuh &middot; TheHive &middot; Cortex &middot; Tailscale &middot; Slack &middot; NIST SP 800-61</p>
+  </section>
+
+  <section class="case-section">
+    <h2>The scenario</h2>
+    <p>
+      Cobalt Bridge Bank is a small regional bank where ransomware staging has been detected on a
+      loan-processing endpoint. The behaviour is a scheduled task creation followed by an attempt
+      to disable Windows Defender. Encryption has not started, but it could within hours, and
+      banking regulators expect documented procedures and timelines for any suspected ransomware
+      precursor. The scenario is simulated with a harmless script, while the detection, the
+      integration, the case handling, and the response actions are all real.
+    </p>
+    <p>The lab was designed around five problems an analyst faces in this situation:</p>
+    <ul class="role-list">
+      <li><strong>Manual handoff delays response.</strong> In the phishing lab the case was created by hand. In a time-critical incident, every minute spent on data entry is a minute the attacker keeps</li>
+      <li><strong>Two events must be read together.</strong> A scheduled task and a Defender change may each look harmless alone. The risk appears when they occur in sequence on the same host</li>
+      <li><strong>Context is lost between tools.</strong> If the detection sits in Wazuh and the investigation sits in TheHive, the analyst has to rebuild the picture before triage can begin</li>
+      <li><strong>Version mismatch.</strong> Wazuh's published TheHive integration was written for TheHive 4, while this lab runs TheHive 5.8.0</li>
+      <li><strong>Regulatory evidence.</strong> The response needs a timeline, a playbook, and a post-incident report that an auditor can follow</li>
+    </ul>
+  </section>
+
+  <section class="case-section">
+    <h2>The approach</h2>
+    <p>
+      A harmless script on HOM-SVR-W004 creates a scheduled task and attempts a Defender tamper,
+      so Wazuh fires a high-severity alert. A custom integration sends the alert to TheHive over
+      Tailscale and promotes it to a case with the relevant observables. Cortex analyzers enrich
+      those observables, and the analyst then follows a written playbook for "ransomware
+      precursor on endpoint", aligned to NIST SP 800-61, covering triage, containment,
+      eradication, and recovery. A post-incident report in TheHive records the timeline, root
+      cause, and lessons learned. The detection maps to MITRE ATT&amp;CK T1053.005 (Scheduled
+      Task) and T1562.001 (Impair Defenses: Disable or Modify Tools).
+    </p>
+  </section>
+
+  <section class="case-section">
+    <h2>Network architecture and data flow</h2>
+    <p>
+      The lab reuses the Home SOC foundation. HOM-SVR-W004 is the target endpoint, HOM-PC-L003
+      runs the Wazuh Manager and the integration script, and HOM-PC-L002 runs TheHive, Cortex, and
+      CyberChef. A Tailscale overlay carries the integration traffic, and VirusTotal and Slack are
+      the external services. The telemetry framework carries Windows Security, Sysmon, Suricata,
+      and Zeek data over TCP 1514 and HTTPS links.
+    </p>
+    <figure class="case-figure">
+      <img src="../assets/img/incidentresponse/00-network-architecture.png" alt="Network architecture diagram for the incident response case workflow lab">
+      <figcaption>Lab topology: the target endpoint, the Wazuh manager and integration host, the TheHive and Cortex investigation platform, and the external services, connected over Tailscale.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/incidentresponse/01-telemetry-and-data-flow.png" alt="Table of numbered telemetry and data flows matching the architecture diagram">
+      <figcaption>Telemetry and data flow table: each numbered flow on the architecture diagram, what it carries, the transport, and why it exists.</figcaption>
+    </figure>
+  </section>
+
+  <section class="case-section">
+    <h2>Technology stack</h2>
+    <table class="sla-table">
+      <tr><th>Component</th><th>Role in this lab</th><th>Why it was chosen</th></tr>
+      <tr><td>Wazuh 4.14.8 (HOM-PC-L003)</td><td>Detects the behaviour and forwards the alert</td><td>Already the detection platform from earlier labs, so custom rules and integrations follow the same pattern as the Slack integration</td></tr>
+      <tr><td>TheHive 5.8.0 (HOM-PC-L002)</td><td>Holds the alert, the promoted case, tasks, timeline, and the post-incident report</td><td>Already running from the phishing lab, with the case lifecycle the deliverables require</td></tr>
+      <tr><td>Cortex 4.1.0 (HOM-PC-L002)</td><td>Enriches observables such as file hashes and dropped artifacts</td><td>Already integrated with TheHive and configured with analyzers</td></tr>
+      <tr><td>Custom integration script (HOM-PC-L003)</td><td>Sends the alert to TheHive and promotes it to a case</td><td>Wazuh has no native TheHive connector, and the published script targets TheHive 4</td></tr>
+      <tr><td>Tailscale</td><td>Carries the integration traffic from L003 to L002</td><td>The tailnet is stable across router changes</td></tr>
+      <tr><td>NIST SP 800-61</td><td>Structures the playbook and report</td><td>The lifecycle named in the brief, and widely recognised by regulators and auditors</td></tr>
+    </table>
+  </section>
+
+  <section class="case-section">
+    <h2>Platform baseline</h2>
+    <p>
+      Software versions were confirmed on both platforms before the build began: Wazuh 4.14.8 on
+      HOM-PC-L003, and TheHive 5.8.0, Cortex 4.1.0, Cassandra 4.1.12, Elasticsearch 8.19.22,
+      Nginx, and CyberChef running on HOM-PC-L002.
+    </p>
+    <figure class="case-figure">
+      <img src="../assets/img/incidentresponse/02-wazuh-manager-version-baseline.png" alt="Wazuh control info output confirming the manager version on HOM-PC-L003">
+      <figcaption>Baseline check on HOM-PC-L003: the Wazuh manager version confirmed before any changes.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/incidentresponse/03-investigation-stack-container-versions.png" alt="Container names and image versions for the investigation stack on HOM-PC-L002">
+      <figcaption>Baseline check on HOM-PC-L002: the investigation stack containers and their image versions.</figcaption>
+    </figure>
+  </section>
+
+  <section class="case-section">
+    <h2>Tailscale cutover</h2>
+    <p>
+      The investigation platform was originally reached over HOM-PC-L002's bridged LAN address,
+      which proved unreliable in the phishing lab: a fault in the host machine's Wi-Fi path
+      caused new TCP connections to time out while ping kept working. To remove that class of
+      fault and to prepare for a router change, the analyst workstation and all four lab VMs were
+      enrolled in a private Tailscale network. Each device gets a stable virtual address that
+      does not change with the router, subnet, or ISP, which a LAN address cannot guarantee.
+    </p>
+    <p>
+      Connectivity to HOM-PC-L002's Tailscale address was confirmed on ports 443, 9000, 9001, and
+      8080. The Nginx certificate had been issued for the old LAN address, and modern browsers
+      require a subject alternative name to validate a certificate against an IP address, so it
+      was reissued directly with OpenSSL to include the Tailscale address as a SAN. TheHive and
+      Cortex then loaded with only the expected self-signed notice.
+    </p>
+    <figure class="case-figure">
+      <img src="../assets/img/incidentresponse/04-tailscale-connectivity-test.png" alt="Ping and TCP connectivity tests to HOM-PC-L002 over its Tailscale address">
+      <figcaption>Connectivity test from HOM-SVR-W004 to HOM-PC-L002's Tailscale address, with ICMP and TCP checks succeeding across the required ports.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/incidentresponse/05-thehive-over-tailscale.png" alt="TheHive login page loaded over the Tailscale address">
+      <figcaption>TheHive reachable over the Tailscale address.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/incidentresponse/06-cortex-over-tailscale.png" alt="Cortex login page loaded over the Tailscale address">
+      <figcaption>Cortex reachable over the Tailscale address.</figcaption>
+    </figure>
+  </section>
+
+  <section class="case-section">
+    <h2>Telemetry baseline and agent configuration</h2>
+    <p>
+      The telemetry baseline was reviewed on HOM-SVR-W004 and HOM-PC-L003 before any detection
+      content was written. Defender was active with real-time protection on and tamper protection
+      off. The audit policy for Other Object Access Events was set to No Auditing, so scheduled
+      task creation events (4698) were not being generated. Sysmon 15.22 was running with a
+      configuration that logged process creation, task file creation, and Defender-related
+      registry changes. On the manager, custom rule IDs up to 100211 were already in use, so IDs
+      from 100300 were reserved for this lab.
+    </p>
+    <figure class="case-figure">
+      <img src="../assets/img/incidentresponse/07-defender-audit-sysmon-baseline.png" alt="PowerShell output showing Defender status, the audit policy setting, and Sysmon version">
+      <figcaption>Telemetry baseline on HOM-SVR-W004: Defender state, the Other Object Access audit setting still at No Auditing, and the Sysmon version.</figcaption>
+    </figure>
+    <p>
+      The audit policy was changed to log successes so task creation reaches the Security log,
+      and the change was verified with auditpol. The Wazuh agent configuration was then reviewed.
+      Application, Security, System, Sysmon, the active response log, and the Suricata eve.json
+      file were being collected, Security was listed twice, and no Defender channel was
+      configured.
+    </p>
+    <figure class="case-figure">
+      <img src="../assets/img/incidentresponse/08-agent-security-channel-review.png" alt="ossec.conf localfile entries showing the Security channel listed twice">
+      <figcaption>Agent configuration review: the Security channel listed twice, one entry with a query filter excluding noisy event IDs. The duplicate predates this lab and was left unchanged.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/incidentresponse/09-defender-channel-added-agent-restarted.png" alt="ossec.conf backed up and the Defender operational channel added, followed by an agent restart">
+      <figcaption>The configuration backed up, the Windows Defender operational channel added, and the agent restarted.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/incidentresponse/10-duplicate-defender-block-removed.png" alt="Duplicate Defender block removed and the agent log confirming the channel is analysed">
+      <figcaption>A duplicate Defender block identified from the agent log and removed, leaving one entry that the agent reports as analysed.</figcaption>
+    </figure>
+  </section>
+
+  <section class="case-section">
+    <h2>Running the trigger and capturing raw events</h2>
+    <p>
+      Wazuh archive logging was confirmed enabled so every event from the agents is available for
+      rule design. A harmless simulation of ransomware staging was then run on HOM-SVR-W004: a
+      placeholder file was created, a scheduled task named CobaltBridge_LoanSync was created, and
+      Defender real-time monitoring was disabled for about 38 seconds before a restore was issued.
+      The script's final status check read False because it ran before the restore had taken
+      effect, so the restore was repeated manually and Defender was verified as enabled.
+    </p>
+    <figure class="case-figure">
+      <img src="../assets/img/incidentresponse/11-archive-logging-enabled.png" alt="logall_json setting and the archive file listing on the Wazuh manager">
+      <figcaption>Archive logging (logall_json) enabled on HOM-PC-L003, with the archive files listed as evidence.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/incidentresponse/12-ransomware-staging-trigger-script.png" alt="The trigger script creating the placeholder file, scheduled task, and Defender tamper attempt">
+      <figcaption>The harmless trigger script: a placeholder file, a persistence scheduled task, a Defender tamper attempt, and a guaranteed restore.</figcaption>
+    </figure>
+    <p>
+      Seven events from the simulation were found across the Sysmon and Security channels,
+      covering file creation, task creation, the PowerShell tamper command, and the Defender
+      registry change. Only built-in rules at level 4 fired, no built-in rule detected the
+      Defender tamper or correlated the two behaviours, and no Slack message was sent because
+      every alert sat below the integration's level 10 threshold.
+    </p>
+    <figure class="case-figure">
+      <img src="../assets/img/incidentresponse/13-raw-events-in-archives.png" alt="Raw events from the simulation found in the Wazuh archive file">
+      <figcaption>The raw events from the simulation located in the Wazuh archive on HOM-PC-L003.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/incidentresponse/14-builtin-alerts-only-low-level.png" alt="Wazuh dashboard showing only low-level built-in alerts for the simulation">
+      <figcaption>The detection gap: only low-level built-in alerts appeared in the dashboard, so the behaviour pair needed custom rules.</figcaption>
+    </figure>
+  </section>
+
+  <section class="case-section">
+    <h2>Custom detection rules</h2>
+    <p>
+      The parent rules were verified first: the sysmon_event1 group and rule 60228 for scheduled
+      task creation. After a backup of local_rules.xml, three rules were added in the 100300
+      range: rule 100300 for scheduled task creation (level 8), rule 100301 for a PowerShell
+      command disabling Defender real-time monitoring (level 10), and rule 100302 correlating the
+      two on the same host within 300 seconds (level 13). The configuration was validated with
+      wazuh-analysisd, which returned RULES OK, and the manager was restarted.
+    </p>
+    <figure class="case-figure">
+      <img src="../assets/img/incidentresponse/15-rules-validated-manager-restarted.png" alt="wazuh-analysisd validation returning RULES OK and the manager service active">
+      <figcaption>Rule validation returning RULES OK and the manager confirmed active after the restart.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/incidentresponse/16-rules-present-in-local-rules.png" alt="The new rules shown at the end of local_rules.xml">
+      <figcaption>The new rules present in local_rules.xml, ending with the correlation rule that groups the ransomware precursor.</figcaption>
+    </figure>
+    <p>
+      The rules were tested end to end after the earlier task and file were cleaned up. Rule
+      100300 fired when the task was created, and about ten seconds later rule 100302 fired at
+      level 13 for HOM-SVR-W004. The level 13 alert was also posted to Slack by the existing
+      integration. The Defender restore command did not trigger the tamper rule, and real-time
+      protection was verified as enabled afterwards.
+    </p>
+    <figure class="case-figure">
+      <img src="../assets/img/incidentresponse/17-trigger-run-after-rules.png" alt="Trigger script output showing the artifact, scheduled task, tamper attempt, and restore">
+      <figcaption>The trigger script run after the rules were in place: the artifact hash, the task creation, the tamper attempt, and the restore, each with a timestamp.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/incidentresponse/18-dashboard-rule-events.png" alt="Wazuh dashboard events showing rules 100300 and 100302 for HOM-SVR-W004">
+      <figcaption>Rules 100300 and 100302 visible in the Wazuh dashboard for HOM-SVR-W004.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/incidentresponse/19-slack-level13-alert.png" alt="Slack alert for the level 13 ransomware precursor rule">
+      <figcaption>The level 13 alert, "Ransomware precursor on HOM-SVR-W004", delivered to Slack with the rule ID and the event detail.</figcaption>
+    </figure>
+  </section>
+
+  <section class="case-section">
+    <h2>Wazuh to TheHive integration</h2>
+    <p>
+      A dedicated service account named Wazuh Integration was created in TheHive so alerts can be
+      created and promoted to cases without administrative rights. Its API key is stored on the
+      manager in a file owned by root with group wazuh and permissions 640, so the script can read
+      it without the key appearing in the Wazuh configuration. The TheHive certificate served by
+      Nginx was retrieved over Tailscale and saved so the script can verify the TLS connection
+      instead of disabling verification.
+    </p>
+    <figure class="case-figure">
+      <img src="../assets/img/incidentresponse/20-wazuh-integration-service-account.png" alt="Creating the Wazuh Integration service account in TheHive">
+      <figcaption>Creating the Wazuh Integration service account in TheHive, a Service-type user with no password login.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/incidentresponse/21-certificate-san-verified.png" alt="Certificate details showing the subject CN and the matching IP subject alternative name">
+      <figcaption>The certificate retrieved over Tailscale, confirmed to carry the subject CN and a matching IP subject alternative name.</figcaption>
+    </figure>
+    <p>
+      The first connection test returned HTTP 400. The stored key was 204 bytes, which showed that
+      extra text had been captured when the key was pasted. The key was replaced with the correct
+      32-character value, and the repeat test against TheHive's current-user endpoint returned
+      HTTP 200.
+    </p>
+    <figure class="case-figure">
+      <img src="../assets/img/incidentresponse/22-api-call-http200-key-stored.png" alt="Key file stored with restricted permissions and a successful HTTP 200 from TheHive">
+      <figcaption>The corrected key stored with restricted ownership and permissions, and the connection test returning HTTP 200.</figcaption>
+    </figure>
+    <p>
+      A custom integration script and its wrapper were then created on the manager. The script
+      reads each rule 100302 alert, builds a TheHive alert with the host, account, command line,
+      process hash, and scheduled task name as observables, and promotes it to a case. It reads
+      the key from the protected file and verifies TLS with the saved certificate.
+    </p>
+    <figure class="case-figure">
+      <img src="../assets/img/incidentresponse/23-custom-thehive-integration-script.png" alt="Integration script and wrapper created with restricted permissions and a successful syntax check">
+      <figcaption>The integration script and wrapper created in the Wazuh integrations folder with permissions 750 and the syntax validated.</figcaption>
+    </figure>
+    <p>
+      The first replay of a saved rule 100302 alert was rejected with HTTP 403. A query of the
+      account showed it had been created in TheHive's platform administration organisation with
+      the admin profile, which carries platform-level permissions only and no alert or case
+      rights. A new service account was created in the demo organisation, where the cases live,
+      with the analyst profile and a new key. The original account, which held an over-privileged
+      key, was deleted.
+    </p>
+    <figure class="case-figure">
+      <img src="../assets/img/incidentresponse/24-service-account-permissions-diagnosed.png" alt="Query output showing the integration account in the admin organisation with platform-level permissions only">
+      <figcaption>The diagnosis of the 403: the account sat in the platform administration organisation with the admin profile, which has no alert or case rights.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/incidentresponse/25-new-service-account-admin-org.png" alt="The replacement service account created in the demo organisation">
+      <figcaption>The replacement service account created in the demo organisation with the analyst profile.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/incidentresponse/26-permissions-verified.png" alt="Current-user query showing the service account permissions in the demo organisation">
+      <figcaption>The new account verified: Service type, demo organisation, analyst profile, with alert and case creation rights and none of the platform administration rights of the removed account.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/incidentresponse/27-replayed-alert-promoted-to-case.png" alt="Case 2 in TheHive created from the replayed alert with its observables">
+      <figcaption>The replay test: the saved alert became a TheHive alert and was promoted to case 2 with its observables attached.</figcaption>
+    </figure>
+    <p>
+      An integration block named custom-thehive was then added to the manager configuration after
+      a backup, set to run only for rule 100302 and to call TheHive at its Tailscale address. The
+      configuration validated, but the first restart did not load the block, as the integration
+      log listed only Slack. After a second restart the log showed both integrations enabled.
+    </p>
+    <figure class="case-figure">
+      <img src="../assets/img/incidentresponse/28-integration-block-in-ossec-conf.png" alt="The custom-thehive integration block added to ossec.conf">
+      <figcaption>The custom-thehive integration block in the manager configuration, scoped to rule 100302.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/incidentresponse/29-integration-validated-after-restart.png" alt="Configuration check, service status, and integration log lines showing slack and custom-thehive enabled">
+      <figcaption>Validation, service status, and integration log lines after the second restart, with both slack and custom-thehive enabled.</figcaption>
+    </figure>
+  </section>
+
+  <section class="case-section">
+    <h2>Live end-to-end test</h2>
+    <p>
+      The detection-to-case workflow was then tested with no manual step in TheHive. After
+      cleanup, the trigger ran on HOM-SVR-W004. Wazuh raised rule 100300 one second after the task
+      was created and rule 100302 three seconds after the Defender tamper command. The dashboard
+      showed both alongside a built-in rule for the executable created by PowerShell. The level
+      13 alert reached Slack, and the integration created a TheHive alert and promoted it to case
+      3 about 18 seconds after the tamper command.
+    </p>
+    <table class="sla-table">
+      <tr><th>Event</th><th>Time (UTC+1)</th></tr>
+      <tr><td>Task created, rule 100300 raised</td><td>21:16:28 to 21:16:29</td></tr>
+      <tr><td>Tamper command, rule 100302 raised</td><td>21:16:33 to 21:16:36</td></tr>
+      <tr><td>TheHive alert created</td><td>21:16:47</td></tr>
+      <tr><td>Case #3 opened</td><td>21:16:51</td></tr>
+    </table>
+    <figure class="case-figure">
+      <img src="../assets/img/incidentresponse/30-live-trigger-run.png" alt="Cleanup and trigger script output for the live end-to-end test">
+      <figcaption>The live run: cleanup, then the trigger creating the artifact, the scheduled task, the tamper attempt, and the restore.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/incidentresponse/31-thehive-alert-list.png" alt="TheHive alert list showing the alert created automatically by the integration">
+      <figcaption>The TheHive alert list showing the alert the integration created from rule 100302.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/incidentresponse/32-case-observables-created.png" alt="Case 3 opened automatically in TheHive with its observables">
+      <figcaption>Case 3 opened automatically in the demo organisation with the alert's observables attached.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/incidentresponse/33-wazuh-dashboard-notifications.png" alt="Wazuh dashboard events for the live run showing rules 100300 and 100302">
+      <figcaption>The Wazuh dashboard notification trail for the live run: rules 100300 and 100302 alongside the built-in PowerShell rule.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/incidentresponse/34-slack-case-notification.png" alt="Slack notification for the live level 13 alert">
+      <figcaption>The Slack notification for the live level 13 alert.</figcaption>
+    </figure>
+  </section>
+
+  <section class="case-section">
+    <h2>Observable enrichment through Cortex</h2>
+    <p>
+      The process image hash added automatically by the integration was confirmed to match the
+      SHA256 of powershell.exe on the host. The SHA256 of the dropped placeholder file was
+      confirmed on the host and added to the case as an observable tagged dropped-artifact and
+      marked as an indicator of compromise, because the alert itself could not carry that value.
+      The VirusTotal analyzer then ran through Cortex against both hashes. The process image hash
+      returned no detections across 71 engines, consistent with the legitimate Microsoft binary,
+      but VirusTotal also listed many alternative file names for it, so a clean hash did not
+      clear the activity and the assessment rested on the command line and the sequence of
+      events. The dropped artifact hash returned no report, consistent with a locally created
+      placeholder file.
+    </p>
+    <figure class="case-figure">
+      <img src="../assets/img/incidentresponse/35-case-observables-list.png" alt="Case 3 observables including both hash values">
+      <figcaption>All five observables on case 3, including the process image hash and the dropped artifact hash.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/incidentresponse/36-virustotal-report-for-hash.png" alt="VirusTotal report for the process image hash returned through Cortex">
+      <figcaption>The VirusTotal report for the process image hash returned inside TheHive: no detections, and many alternative file names.</figcaption>
+    </figure>
+  </section>
+
+  <section class="case-section">
+    <h2>The incident response playbook</h2>
+    <p>
+      The playbook sets out how Cobalt Bridge Bank responds when Wazuh detects a ransomware
+      precursor on an endpoint. It begins when rule 100302 raises a high-severity alert and opens
+      a case automatically, and it is written for the analyst who owns the incident from alert to
+      closure and for the business leaders who must decide quickly and document each decision. It
+      follows the NIST SP 800-61 lifecycle, with actions, tools, and target timelines for each
+      phase, so the response is consistent and open to regulator review. It was loaded into case
+      3 as 16 tasks under five lifecycle phases, created through the TheHive API with the
+      integration's service account.
+    </p>
+    <figure class="case-figure">
+      <img src="../assets/img/incidentresponse/37-playbook-task-creation.png" alt="Terminal output showing the playbook tasks being created in case 3 through the TheHive API">
+      <figcaption>The 16 playbook tasks created in case 3 through the TheHive API.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/incidentresponse/38-playbook-tasks-in-thehive.png" alt="Playbook tasks listed in case 3 under their lifecycle phases">
+      <figcaption>The playbook tasks listed in case 3 under their lifecycle phases, ready to be worked.</figcaption>
+    </figure>
+  </section>
+
+  <section class="case-section">
+    <h2>Triage before containment</h2>
+    <p>
+      The host was checked for readiness to isolate: the session was the console, Windows
+      Firewall was enabled on all three profiles, the Tailscale daemon was located, and the
+      Wazuh manager was reachable on TCP 1514 over Tailscale. Triage then completed the seven
+      analysis tasks. Defender real-time protection was on with no exclusions, the scheduled task
+      CobaltBridge_LoanSync was present and set to run PowerShell against the placeholder file as
+      SYSTEM, and no shadow copies were found. A 72-hour dashboard search across all agents found
+      the task name only on HOM-SVR-W004, in the two alerts raised by rule 100300. The incident
+      was assessed as a genuine ransomware precursor with no encryption observed, so the response
+      moved to containment.
+    </p>
+    <figure class="case-figure">
+      <img src="../assets/img/incidentresponse/39-shadow-copy-search-no-results.png" alt="Wazuh dashboard search for vssadmin over 72 hours returning no results">
+      <figcaption>A 72-hour dashboard search for vssadmin returned no results on any host, so no shadow copy deletion was observed.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/incidentresponse/40-detection-analysis-tasks-completed.png" alt="Detection and analysis tasks marked completed in TheHive">
+      <figcaption>The detection and analysis tasks marked complete in TheHive, with findings recorded as task logs.</figcaption>
+    </figure>
+  </section>
+
+  <section class="case-section">
+    <h2>Containment: isolating the host</h2>
+    <p>
+      HOM-SVR-W004 was isolated from its console at 08:01 UTC on 13 October using Windows
+      Firewall. Two allow rules were created first, one for the Wazuh agent to reach the manager
+      at its Tailscale address on TCP 1514 and one for the Tailscale daemon. The default inbound
+      and outbound actions were then set to block on the domain, private, and public profiles.
+      Verification showed an internet connection test blocked, the manager connection still open,
+      the Wazuh agent service running, and the agent Active on the manager, with a Tailscale ping
+      answered, so telemetry and secure management access were retained.
+    </p>
+    <figure class="case-figure">
+      <img src="../assets/img/incidentresponse/41-isolation-applied.png" alt="Isolation applied on HOM-SVR-W004 with the timestamp recorded">
+      <figcaption>Isolation applied from the console, with the timestamp recorded for the timeline.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/incidentresponse/42-isolation-verified-from-host.png" alt="Host-side verification showing the internet test blocked and the manager connection open">
+      <figcaption>Host-side verification: the internet test blocked, the manager connection still open, and the Wazuh agent service running.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/incidentresponse/43-agent-active-tailscale-ping.png" alt="Agent list showing the isolated host Active and a successful Tailscale ping">
+      <figcaption>The isolated host still Active on the manager, and a Tailscale ping from HOM-PC-L003 answered.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/incidentresponse/44-firewall-backup-and-allow-rules.png" alt="Pre-isolation firewall export and the isolation allow rules in place">
+      <figcaption>The pre-isolation firewall export and the isolation allow rules in place for the Wazuh agent and the Tailscale daemon.</figcaption>
+    </figure>
+
+    <h3 style="font-size:16px; font-weight:600; margin:28px 0 10px;">Isolation found incomplete, then tightened</h3>
+    <p>
+      Verifying the isolation from outside showed it was incomplete. A connection test from
+      HOM-PC-L003 found TCP port 5985 (Windows Remote Management) still reachable on both the LAN
+      and Tailscale addresses, because inbound allow rules that are enabled by default take
+      precedence over the default block. A review of all enabled inbound rules showed about 45
+      rules outside the core networking group. Their names were saved to a file and the rules
+      were disabled, after which the LAN address showed ports 135, 445, 5357, 5985, and 47001
+      closed. Port 5985 stayed reachable over Tailscale because the Tailscale rule trusts traffic
+      arriving through the tunnel, so a block rule was added for inbound traffic from the
+      Tailscale address range (100.64.0.0/10).
+    </p>
+    <figure class="case-figure">
+      <img src="../assets/img/incidentresponse/45-inbound-rules-and-listening-ports.png" alt="Enabled inbound rules and listening ports on HOM-SVR-W004">
+      <figcaption>Review of the inbound allow rules and listening ports that were still exposing the host despite the default block.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/incidentresponse/46-external-port-test-5985-open.png" alt="Port tests from HOM-PC-L003 showing port 5985 open before and after the first tightening">
+      <figcaption>External port tests from HOM-PC-L003: port 5985 open on both addresses, then closed on the LAN address after the inbound rules were disabled but still open over Tailscale.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/incidentresponse/47-inbound-rules-disabled.png" alt="45 inbound rules saved to a file and disabled, leaving only Tailscale rules enabled">
+      <figcaption>The 45 inbound rules saved to a file and disabled, leaving only the Tailscale rules enabled outside core networking.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/incidentresponse/48-final-port-test-after-tailnet-block.png" alt="Final port test showing port 5985 closed over Tailscale with the agent still Active">
+      <figcaption>The final test: port 5985 closed over Tailscale, the agent still Active, and the Tailscale ping still answered.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/incidentresponse/49-tailnet-block-rule-created.png" alt="Block rule for inbound traffic from the tailnet address range created alongside the isolation allow rules">
+      <figcaption>The block rule for inbound traffic from the Tailscale range (100.64.0.0/10), listed alongside the isolation allow rules.</figcaption>
+    </figure>
+  </section>
+
+  <section class="case-section">
+    <h2>Eradication</h2>
+    <p>
+      Eradication was carried out while the host stayed isolated. The scheduled task
+      CobaltBridge_LoanSync and the dropped file folder were removed and confirmed absent. A
+      review of non-Microsoft scheduled tasks, the Run key, and non-Microsoft automatic services
+      found only known items and nothing referring to the simulation. A Defender quick scan ran
+      on the host and returned no threat detections, and a quick scan was used instead of the
+      playbook's full scan to keep the exercise short. Tamper Protection was turned on and
+      verified, and the antivirus signatures were found to date from 12 October because the
+      isolation blocks updates.
+    </p>
+    <figure class="case-figure">
+      <img src="../assets/img/incidentresponse/50-scheduled-task-removed.png" alt="Scheduled task and dropped file folder removed and confirmed absent">
+      <figcaption>The persistence removed: the scheduled task deleted and the dropped file folder confirmed gone.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/incidentresponse/51-defender-cloud-protection-settings.png" alt="Windows Security settings showing cloud-delivered protection, sample submission, and Tamper Protection on">
+      <figcaption>Windows Security settings with cloud-delivered protection, automatic sample submission, and Tamper Protection turned on.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/incidentresponse/52-defender-quick-scan-started.png" alt="Defender quick scan started from PowerShell">
+      <figcaption>A Defender quick scan started from PowerShell.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/incidentresponse/53-defender-quick-scan-completed.png" alt="Quick scan start and end times with the antivirus signature date">
+      <figcaption>The quick scan's start and end times and the signature date, confirming the scan completed and that signatures were stale while the host was isolated.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/incidentresponse/54-defender-state-verified-after-scan.png" alt="Defender status showing real-time protection enabled and tamper protected">
+      <figcaption>Defender status after eradication: real-time protection enabled, tamper protected, and antivirus enabled.</figcaption>
+    </figure>
+  </section>
+
+  <section class="case-section">
+    <h2>Recovery</h2>
+    <p>
+      Before recovery began, a dashboard search for alerts of level 7 and above from
+      HOM-SVR-W004 over the previous 24 hours returned nothing, meeting the playbook's quiet-period
+      criterion. Recovery then ran in two stages. In stage 1, the default outbound action was
+      returned to not configured and the four isolation allow rules were removed, while the
+      inbound default stayed on block, the tailnet block rule stayed in place, and the saved
+      inbound rules stayed disabled. An outbound test succeeded, and with outbound access back
+      the Defender signatures were updated to the latest release, followed by another quick scan
+      with no detections.
+    </p>
+    <figure class="case-figure">
+      <img src="../assets/img/incidentresponse/55-isolation-removed-signatures-updated.png" alt="Stage 1 recovery showing the firewall profiles restored and Defender signatures updated">
+      <figcaption>Stage 1 of recovery: outbound access restored, isolation allow rules removed, and Defender signatures updated.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/incidentresponse/56-dashboard-events-after-recovery.png" alt="Wazuh dashboard events from HOM-SVR-W004 during recovery dominated by routine PowerShell alerts">
+      <figcaption>Wazuh dashboard events from HOM-SVR-W004 during recovery, dominated by routine alerts from PowerShell's own script-policy test files.</figcaption>
+    </figure>
+    <p>
+      In stage 2, on 15 October, the remaining isolation rules were removed, the inbound default
+      was returned to not configured on all profiles, and 43 of the 45 inbound rules disabled
+      during containment were re-enabled from the saved list. The two Windows Remote Management
+      rules were deliberately left disabled as a hardening change. A port test then showed ports
+      135, 445, 5985, and 47001 closed, with port 5357 open again because the default network
+      discovery rule had been restored. The agent stayed Active and the Tailscale ping was
+      answered.
+    </p>
+    <figure class="case-figure">
+      <img src="../assets/img/incidentresponse/57-external-port-test-after-recovery.png" alt="Port test after the final recovery stage with the agent Active and Tailscale ping answered">
+      <figcaption>Stage 2 of recovery: the port test after rules were restored, with the Wazuh agent Active and the Tailscale ping answered.</figcaption>
+    </figure>
+
+    <h3 style="font-size:16px; font-weight:600; margin:28px 0 10px;">48-hour alert review</h3>
+    <p>
+      The 95 alerts of level 7 and above raised for HOM-SVR-W004 in the 48 hours after recovery
+      began were traced to their sources. Most were rules 92205 and 92213, caused by PowerShell
+      writing its script-policy test files to temporary folders at the start of each session, and
+      a burst on 13 October was caused by Windows Disk Cleanup extracting its provider files. Two
+      rule 100300 alerts came from Microsoft's own Defender scheduled scan task. A periodic
+      compliance scan scored the host 26 percent against the CIS Windows Server 2022 benchmark,
+      and a firewall rule alert was traced to Tailscale adding its own inbound rules. None of the
+      alerts showed a Defender disable, the simulated task, shadow copy deletion, or rule 100302,
+      so the quiet-period criterion was assessed as met and the routine alert volume was recorded
+      as a tuning item. An unclean restart on 13 October was a forced restart of the virtual
+      machine because of system lag, after which the isolation rules remained in force.
+    </p>
+    <figure class="case-figure">
+      <img src="../assets/img/incidentresponse/last_48_hrs_page-0001.png" alt="Wazuh dashboard export page 1 of the alerts of level 7 and above for HOM-SVR-W004 in the 48 hours after recovery began">
+      <figcaption>The 48-hour review, page 1 of 2: alerts of level 7 and above for HOM-SVR-W004 after recovery began, exported from the Wazuh dashboard.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/incidentresponse/last_48_hrs_page-0002.png" alt="Wazuh dashboard export page 2 of the alerts of level 7 and above for HOM-SVR-W004 in the 48 hours after recovery began">
+      <figcaption>The 48-hour review, page 2 of 2: the remaining alerts, all traced to routine activity.</figcaption>
+    </figure>
+  </section>
+
+  <section class="case-section">
+    <h2>Post-incident report and case closure</h2>
+    <p>
+      Case 3 was closed as a true positive with no impact after all 16 playbook tasks were marked
+      Completed. The recovery task note recorded the two recovery stages, the criteria checked,
+      and the outcome of the 48-hour alert review. The post-incident report page was saved in the
+      case and a formatted Word version was produced.
+    </p>
+    <figure class="case-figure">
+      <img src="../assets/img/incidentresponse/58-post-incident-report-in-thehive.png" alt="Post-incident report page for the ransomware precursor on HOM-SVR-W004 in TheHive">
+      <figcaption>The post-incident report page saved in case 3: "Ransomware Precursor on HOM-SVR-W004".</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/incidentresponse/59-post-incident-report-body.png" alt="Detailed content of the post-incident report in TheHive">
+      <figcaption>The detailed content of the post-incident report, the record an auditor can follow.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/incidentresponse/60-all-tasks-completed.png" alt="All 16 playbook tasks marked completed in TheHive">
+      <figcaption>All 16 playbook tasks marked Completed.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/incidentresponse/61-case-closed-true-positive.png" alt="Case 3 closed as a true positive with no impact">
+      <figcaption>Case 3 closed as a true positive with no impact.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/incidentresponse/62-case-closure-details.png" alt="Closure details recorded in case 3">
+      <figcaption>The closure details recorded against the case.</figcaption>
+    </figure>
+  </section>
+
+  <section class="case-section">
+    <h2>Network reconfiguration and agent restoration</h2>
+    <p>
+      After a home router replacement, the LAN addresses of the lab machines changed and the
+      Wazuh agents showed as disconnected. The agent on HOM-SVR-W004 was found pointing at the
+      manager's previous LAN address. The agents on HOM-SVR-W004 and HOM-PC-L002 were
+      reconfigured to use the manager's Tailscale address, which does not change with the
+      network, and HOM-PC-L002 re-registered under a new agent ID. TheHive, Cortex, and the
+      integration were unaffected because they already used Tailscale addresses. HOM-PC-W001 was
+      powered on briefly, its agent address updated, and the agent confirmed Active.
+    </p>
+    <figure class="case-figure">
+      <img src="../assets/img/incidentresponse/63-agents-after-router-change.png" alt="Wazuh dashboard showing two agents Active after the agents were pointed at the manager's Tailscale address">
+      <figcaption>After the router change: the two agents reconfigured to the Tailscale address showing Active in the Wazuh dashboard.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/incidentresponse/64-w001-reconnected-three-agents.png" alt="Wazuh dashboard showing all three agents Active after HOM-PC-W001 reconnected">
+      <figcaption>HOM-PC-W001 reconnected: all three agents Active, completing the address change for every lab machine.</figcaption>
+    </figure>
+  </section>
+
+  <section class="case-section">
+    <h2>Retiring the investigation stack and the integration</h2>
+    <p>
+      After all evidence was captured, the investigation stack on HOM-PC-L002 was purged so the
+      resources borrowed from HOM-PC-W001 could be returned. The compose project was stopped and
+      its containers removed, the data and log directories were emptied while the configuration,
+      certificates, templates, and compose files were kept for a possible rebuild, and the
+      images were removed in two passes, the second catching the eight Cortex analyzer images
+      and an empty volume the first had missed. CyberChef was left running. Memory in use fell
+      from 5.8 GiB to 1.4 GiB, and disk use fell from 23 GB to 18 GB.
+    </p>
+    <figure class="case-figure">
+      <img src="../assets/img/incidentresponse/65-cleanup-survey-before-purge.png" alt="Container, volume, memory, and disk usage survey on HOM-PC-L002 before the purge">
+      <figcaption>The survey before the purge: containers, volumes, memory, and disk use on HOM-PC-L002.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/incidentresponse/66-containers-stopped-and-removed.png" alt="docker compose down removing the investigation stack containers and network">
+      <figcaption>The compose project stopped and its containers and network removed, with CyberChef left running.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/incidentresponse/67-first-image-removal.png" alt="First image removal pass removing the TheHive, Cortex, Elasticsearch, and Cassandra images">
+      <figcaption>First image removal pass: the TheHive, Cortex, Elasticsearch, and Cassandra images removed, with the analyzer images still listed.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/incidentresponse/68-second-image-removal.png" alt="Second image removal pass removing the eight Cortex analyzer images and the unused volume">
+      <figcaption>Second pass: the eight Cortex analyzer images and the empty unused volume that the first pass missed.</figcaption>
+    </figure>
+    <figure class="case-figure">
+      <img src="../assets/img/incidentresponse/69-purge-verified.png" alt="Verification that the stack, images, and volumes were purged">
+      <figcaption>Verification that the purge took effect.</figcaption>
+    </figure>
+    <p>
+      The TheHive integration was then retired on HOM-PC-L003 because the service no longer
+      existed. After a backup of ossec.conf, the custom-thehive block was removed and the stored
+      API key deleted. The configuration validated, the manager restarted, and the integration
+      log listed only Slack. Rules 100300 to 100302 and the integration scripts were kept, so the
+      workflow can be restored by adding the block and a new key to a rebuilt TheHive.
+    </p>
+    <figure class="case-figure">
+      <img src="../assets/img/incidentresponse/70-integration-retired.png" alt="Configuration check, service status, and integration log showing only Slack enabled">
+      <figcaption>The TheHive integration retired: configuration validated, manager active, and the integration log listing only Slack.</figcaption>
+    </figure>
+    <p>
+      HOM-PC-L002 was reduced to its original size and kept running CyberChef and its Wazuh
+      agent, and HOM-PC-W001 was powered on with its agent reporting Active, so the platform was
+      ready for the next project.
+    </p>
+    <figure class="case-figure">
+      <img src="../assets/img/incidentresponse/71-four-agents-active.png" alt="Agent list on HOM-PC-L003 showing all four agents Active">
+      <figcaption>The agent list on HOM-PC-L003 with all four lab machines Active, confirming the platform was restored to its pre-lab state.</figcaption>
+    </figure>
+  </section>
+
+  <section class="case-section">
+    <h2>Challenges and fixes</h2>
+    <table class="sla-table">
+      <tr><th>Problem</th><th>Cause</th><th>Fix</th></tr>
+      <tr><td>No TheHive 5 connector</td><td>Wazuh's published integration targets TheHive 4</td><td>Wrote a custom integration script and wrapper for TheHive 5</td></tr>
+      <tr><td>No scheduled task events</td><td>Audit policy for Other Object Access Events was set to No Auditing</td><td>Enabled success auditing and verified it with auditpol</td></tr>
+      <tr><td>Duplicate Defender channel</td><td>The block was added while an entry already existed</td><td>Removed the extra entry after reading the agent log</td></tr>
+      <tr><td>HTTP 400 on first API test</td><td>Extra text captured when the key was pasted</td><td>Replaced the key with the correct 32-character value</td></tr>
+      <tr><td>HTTP 403 on alert replay</td><td>Account sat in the admin organisation with platform-only rights</td><td>Created an analyst service account in the demo organisation and deleted the over-privileged one</td></tr>
+      <tr><td>Integration not loaded</td><td>First manager restart did not pick up the new block</td><td>Restarted again and confirmed in the integration log</td></tr>
+      <tr><td>Defender status read False</td><td>The script checked before the restore had taken effect</td><td>Added a twenty-second wait to the status check</td></tr>
+      <tr><td>Isolation still reachable</td><td>Default-enabled inbound allow rules took precedence over the default block</td><td>Disabled about 45 inbound rules and added a block rule for the tailnet range</td></tr>
+      <tr><td>Stale signatures</td><td>Isolation blocked Defender updates</td><td>Updated signatures in recovery stage 1 and rescanned</td></tr>
+      <tr><td>Agents disconnected</td><td>Router replacement changed LAN addresses</td><td>Pointed the agents at the manager's Tailscale address</td></tr>
+    </table>
+  </section>
+
+  <section class="case-section" style="border-bottom:none;">
+    <h2>What would change in production</h2>
+    <ul class="role-list">
+      <li><strong>Tuning.</strong> Administrators and legitimate software create scheduled tasks constantly, so a production rule would need allow-lists and correlation with the Defender event to limit false positives</li>
+      <li><strong>Alert volume.</strong> Automatic case creation suits high-severity detections only, since promoting every alert would flood the queue</li>
+      <li><strong>Credential handling.</strong> The integration would use a least-privilege service account with a managed secret</li>
+      <li><strong>Containment decisions.</strong> Isolating a loan-processing host affects business operations, so a real SOC would define who approves isolation and how fast</li>
+      <li><strong>Evidence preservation.</strong> The playbook would address what is captured before a host is isolated or rebuilt</li>
+      <li><strong>Scale.</strong> A bank would add redundancy for Wazuh, TheHive, and the integration path so a failure does not silence alerting</li>
+    </ul>
+    <p>
+      The full project report is documented on Notion.
+    </p>
+    <p>
+      <a href="https://app.notion.com/p/Incident-Response-Case-Workflow-3f447b624f4780a7a049d941ff5c72ff" target="_blank" rel="noopener">View full report on Notion &rarr;</a>
+    </p>
+  </section>
+
+</div>
+
+<footer class="site">
+  <div class="wrap">
+    Built and maintained by Prince Ugochukwu.
+  </div>
+</footer>
+
+</body>
+</html>

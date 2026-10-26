@@ -69,6 +69,19 @@
     <h3 class="group-heading">Home SOC lab pack</h3>
 
     <div class="project">
+      <h3><a href="projects/incidentresponse.html">Incident Response Case Workflow</a></h3>
+      <p class="tools">Wazuh &middot; TheHive &middot; Cortex &middot; Tailscale &middot; Slack &middot; NIST SP 800-61</p>
+      <p>
+        I took a simulated ransomware precursor at a regional bank from detection to closure.
+        Custom Wazuh rules catch the scheduled task and Defender tamper sequence, an integration
+        I wrote opens the TheHive case automatically, and a NIST SP 800-61 playbook then drives
+        triage, containment, eradication, recovery, and the post-incident report. Verification
+        exposed two real faults, an over-privileged service account and a host isolation that
+        still left port 5985 reachable, and both were diagnosed and fixed.
+      </p>
+    </div>
+
+    <div class="project">
       <h3><a href="projects/phishingemail.html">Phishing Email Investigation</a></h3>
       <p class="tools">TheHive &middot; Cortex &middot; CyberChef &middot; VirusTotal &middot; Wazuh-Slack alerting</p>
       <p>
